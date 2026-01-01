@@ -42,20 +42,18 @@ if __name__ == "__main__":
     print("🚀 Initializing Roblox Moderation System...")
     print("=" * 50)
 
-    if not check_environment():
-        # We continue even if token is missing so the user can see the error in logs
-        pass
+    has_token = check_environment()
 
-    # Start Flask in a background thread
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
+    # Start Flask in the main thread for reliable operation
+    # Start Discord bot in a background thread if token is available
+    if has_token:
+        discord_thread = threading.Thread(target=run_discord, daemon=True)
+        discord_thread.start()
+        time.sleep(1)
 
-    # Give Flask a moment to start up
-    time.sleep(2)
-
-    # Start the Discord bot in the main thread
+    # Run Flask in the main thread (keeps the app running)
     try:
-        run_discord()
+        run_flask()
     except KeyboardInterrupt:
         print("\n👋 Application stopped by user.")
         sys.exit(0)
