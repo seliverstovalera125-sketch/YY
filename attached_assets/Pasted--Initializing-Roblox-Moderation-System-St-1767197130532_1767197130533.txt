@@ -1,0 +1,140 @@
+ Initializing Roblox Moderation System...
+==================================================
+🌐 Starting Flask server on port 5000...
+ * Serving Flask app 'server'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.31.78.34:5000
+172.31.78.34 - - [31/Dec/2025 16:04:26] "GET / HTTP/1.1" 200 -
+2025-12-31 16:04:27,159 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+🤖 Starting Discord bot...
+2025-12-31 16:04:27,161 - bot - INFO - Starting bot...
+2025-12-31 16:04:27,161 - bot - INFO - Total commands loaded: 19
+2025-12-31 16:04:27,161 - bot - INFO - PC Ban system: Enabled
+2025-12-31 16:04:27,161 - bot - INFO - Banlist Auto-save: ✅ ALWAYS enabled (saves to banlists/)
+2025-12-31 16:04:27 WARNING  discord.ext.commands.bot Privileged message content intent is missing, commands may not work as expected.
+2025-12-31 16:04:27,162 - discord.ext.commands.bot - WARNING - Privileged message content intent is missing, commands may not work as expected.
+2025-12-31 16:04:27 INFO     discord.client logging in using static token
+2025-12-31 16:04:27,162 - discord.client - INFO - logging in using static token
+172.31.78.34 - - [31/Dec/2025 16:04:27] "GET /get_commands HTTP/1.1" 200 -
+2025-12-31 16:04:27,467 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:27] "GET /get_commands HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:27] "POST /clear_commands HTTP/1.1" 200 -
+2025-12-31 16:04:27,801 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:27] "POST /clear_commands HTTP/1.1" 200 -
+Players: 0
+172.31.78.34 - - [31/Dec/2025 16:04:28] "POST /update_players HTTP/1.1" 200 -
+2025-12-31 16:04:28,136 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:28] "POST /update_players HTTP/1.1" 200 -
+2025-12-31 16:04:28 INFO     discord.gateway Shard ID None has connected to Gateway (Session ID: 08edc5e14af9d1df569dc37c92c29c3c).
+2025-12-31 16:04:28,143 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 08edc5e14af9d1df569dc37c92c29c3c).
+2025-12-31 16:04:30,494 - bot - INFO - Bot ready: Kynx#2351
+172.31.78.34 - - [31/Dec/2025 16:04:31] "GET /get_commands HTTP/1.1" 200 -
+2025-12-31 16:04:31,523 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:31] "GET /get_commands HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:31] "POST /clear_commands HTTP/1.1" 200 -
+2025-12-31 16:04:31,858 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:31] "POST /clear_commands HTTP/1.1" 200 -
+Players: 0
+172.31.78.34 - - [31/Dec/2025 16:04:32] "POST /update_players HTTP/1.1" 200 -
+2025-12-31 16:04:32,203 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:32] "POST /update_players HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:35] "GET /get_commands HTTP/1.1" 200 -
+2025-12-31 16:04:35,569 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:35] "GET /get_commands HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:35] "POST /clear_commands HTTP/1.1" 200 -
+2025-12-31 16:04:35,907 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:35] "POST /clear_commands HTTP/1.1" 200 -
+Players: 0
+172.31.78.34 - - [31/Dec/2025 16:04:36] "POST /update_players HTTP/1.1" 200 -
+2025-12-31 16:04:36,263 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:36] "POST /update_players HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:39] "GET /get_commands HTTP/1.1" 200 -
+2025-12-31 16:04:39,620 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:39] "GET /get_commands HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:39] "POST /clear_commands HTTP/1.1" 200 -
+2025-12-31 16:04:39,953 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:39] "POST /clear_commands HTTP/1.1" 200 -
+Players: 0
+172.31.78.34 - - [31/Dec/2025 16:04:40] "POST /update_players HTTP/1.1" 200 -
+2025-12-31 16:04:40,320 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:40] "POST /update_players HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:41] "GET /get_bans HTTP/1.1" 200 -
+2025-12-31 16:04:41,404 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:41] "GET /get_bans HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:43] "GET /get_commands HTTP/1.1" 200 -
+2025-12-31 16:04:43,698 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:43] "GET /get_commands HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:44] "POST /clear_commands HTTP/1.1" 200 -
+2025-12-31 16:04:44,042 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:44] "POST /clear_commands HTTP/1.1" 200 -
+Players: 0
+172.31.78.34 - - [31/Dec/2025 16:04:44] "POST /update_players HTTP/1.1" 200 -
+2025-12-31 16:04:44,374 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:44] "POST /update_players HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:47] "GET /get_commands HTTP/1.1" 200 -
+2025-12-31 16:04:47,735 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:47] "GET /get_commands HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:48] "POST /clear_commands HTTP/1.1" 200 -
+2025-12-31 16:04:48,076 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:48] "POST /clear_commands HTTP/1.1" 200 -
+Players: 0
+172.31.78.34 - - [31/Dec/2025 16:04:48] "POST /update_players HTTP/1.1" 200 -
+2025-12-31 16:04:48,413 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:48] "POST /update_players HTTP/1.1" 200 -
+2025-12-31 16:04:49 ERROR    discord.app_commands.tree Ignoring exception in command 'unpcban'
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/bot.py", line 1666, in unpcban_command
+    await interaction.followup.send(embed=embed, view=UnPCBanView(userid, username, display_name, interaction.user))
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/webhook/async_.py", line 1900, in send
+    data = await adapter.execute_webhook(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/webhook/async_.py", line 226, in request
+    raise HTTPException(response, data)
+discord.errors.HTTPException: 400 Bad Request (error code: 50035): Invalid Form Body
+In components.0.components.0.emoji.name: Invalid emoji
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/tree.py", line 1297, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'unpcban' raised an exception: HTTPException: 400 Bad Request (error code: 50035): Invalid Form Body
+In components.0.components.0.emoji.name: Invalid emoji
+2025-12-31 16:04:49,120 - discord.app_commands.tree - ERROR - Ignoring exception in command 'unpcban'
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/bot.py", line 1666, in unpcban_command
+    await interaction.followup.send(embed=embed, view=UnPCBanView(userid, username, display_name, interaction.user))
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/webhook/async_.py", line 1900, in send
+    data = await adapter.execute_webhook(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/webhook/async_.py", line 226, in request
+    raise HTTPException(response, data)
+discord.errors.HTTPException: 400 Bad Request (error code: 50035): Invalid Form Body
+In components.0.components.0.emoji.name: Invalid emoji
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/tree.py", line 1297, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'unpcban' raised an exception: HTTPException: 400 Bad Request (error code: 50035): Invalid Form Body
+In components.0.components.0.emoji.name: Invalid emoji
+172.31.78.34 - - [31/Dec/2025 16:04:51] "GET /get_commands HTTP/1.1" 200 -
+2025-12-31 16:04:51,771 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:51] "GET /get_commands HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:52] "POST /clear_commands HTTP/1.1" 200 -
+2025-12-31 16:04:52,112 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:52] "POST /clear_commands HTTP/1.1" 200 -
+Players: 0
+172.31.78.34 - - [31/Dec/2025 16:04:52] "POST /update_players HTTP/1.1" 200 -
+2025-12-31 16:04:52,472 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:52] "POST /update_players HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:55] "GET /get_commands HTTP/1.1" 200 -
+2025-12-31 16:04:55,820 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:55] "GET /get_commands HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:04:56] "POST /clear_commands HTTP/1.1" 200 -
+2025-12-31 16:04:56,174 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:56] "POST /clear_commands HTTP/1.1" 200 -
+Players: 0
+172.31.78.34 - - [31/Dec/2025 16:04:56] "POST /update_players HTTP/1.1" 200 -
+2025-12-31 16:04:56,550 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:04:56] "POST /update_players HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:05:00] "GET /get_commands HTTP/1.1" 200 -
+2025-12-31 16:05:00,135 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:05:00] "GET /get_commands HTTP/1.1" 200 -
+172.31.78.34 - - [31/Dec/2025 16:05:00] "POST /clear_commands HTTP/1.1" 200 -
+2025-12-31 16:05:00,467 - werkzeug - INFO - 172.31.78.34 - - [31/Dec/2025 16:05:00] "POST /clear_commands HTTP/1.1" 200 -
+Players: 0
