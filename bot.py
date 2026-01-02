@@ -15,7 +15,7 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 ALLOWED_ROLE_ID = int(os.getenv("ALLOWED_ROLE_ID", "0"))
 ADMIN_ROLE_ID = int(os.getenv("ADMIN_ROLE_ID", "0"))
-API_URL = "https://416a0b08-7009-4aba-8fb6-dbaf1c130a1d-00-1z6935339hhfd.spock.replit.dev"
+API_URL = "https://a0077eee-c497-43f3-b189-c4c77d39fa4e-00-24uu76dd8yyu8.riker.replit.dev/"
 
 # Create directory for banlist storage if it doesn't exist
 BANLIST_DIR = "banlists"
