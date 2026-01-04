@@ -34,6 +34,6 @@ localPort = 5000
 externalPort = 80
 
 [deployment]
-deploymentTarget = "autoscale"
-run = ["python", "main.py"]
+deploymentTarget = "static"
 build = ["pip install -r requirements.txt"]
+publicDir = "1"
