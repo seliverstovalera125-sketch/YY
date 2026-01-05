@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from dotenv import load_dotenv
+import server
 
 # Load environment variables from .env
 load_dotenv()
@@ -19,7 +20,6 @@ def check_environment():
 def run_flask():
     """Start the Flask API server."""
     try:
-        import server
         print("🌐 Starting Flask server on port 5000...")
         server.run()
     except Exception as e:
@@ -58,12 +58,10 @@ if __name__ == "__main__":
 
     has_token = check_environment()
 
-    # Start Flask in the main thread for reliable operation
     # Start Discord bot in a background thread if token is available
     if has_token:
         discord_thread = threading.Thread(target=run_discord, daemon=True)
         discord_thread.start()
-        time.sleep(1)
 
     # Run Flask in the main thread (keeps the app running)
     try:
