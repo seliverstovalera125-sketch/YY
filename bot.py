@@ -2544,20 +2544,6 @@ async def deleteserverallwebhook_command(interaction: discord.Interaction):
         await interaction.followup.send(embed=embed, view=view)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @tree.command(name="help", description="Show commands")
 async def help_command(interaction: discord.Interaction):
     embed = ModerationEmbed(

@@ -52,6 +52,28 @@ def get_players():
     return jsonify({"count": player_count})
 
 
+@app.route("/BanAsync", methods=["POST"])
+def ban_async():
+    data = request.json
+    user_id = data.get("userid")
+    if user_id:
+        banned_user_ids.add(int(user_id))
+        print(f"✅ Banned Async UserId: {user_id}")
+        return jsonify({"status": "banned"})
+    return jsonify({"error": "Missing userid"}), 400
+
+
+@app.route("/check_webhooks", methods=["GET"])
+def check_webhooks():
+    # Placeholder for webhook tracking
+    return jsonify({"webhooks": []})
+
+
+@app.route("/deleteserverallwebhook", methods=["POST"])
+def delete_all_webhooks():
+    return jsonify({"status": "webhooks cleared"})
+
+
 # === BAN SYSTEM ===
 
 
