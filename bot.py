@@ -2300,62 +2300,6 @@ async def unbanasync_command(interaction: discord.Interaction, userid: str):
 
 
 
-class DeleteWebhooksConfirmView(View):
-    def __init__(self, interaction_user: discord.User, count: int = 0):
-        super().__init__(timeout=60)
-        self.interaction_user = interaction_user
-        self.count = count
-
-    @discord.ui.button(label="Confirm Delete", style=discord.ButtonStyle.danger, emoji="🗑️")
-    async def confirm(self, interaction: discord.Interaction, button: Button):
-        if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.", ephemeral=True)
-            return
-
-        button.disabled = True
-        await interaction.response.edit_message(view=self)
-
-        try:
-            response = requests.post(f"{API_URL}/deleteserverallwebhook", timeout=10)
-            if response.status_code == 200:
-                embed = ModerationEmbed(
-                    title="✅ Webhooks Deleted",
-                    description="All server webhooks have been permanently removed.",
-                    color=discord.Color.green(),
-                    moderator=interaction.user
-                )
-                await interaction.edit_original_response(embed=embed, view=None)
-            else:
-                await interaction.edit_original_response(content="❌ Failed to delete webhooks.", view=None)
-        except Exception as e:
-            await interaction.edit_original_response(content=f"❌ Error: {str(e)}", view=None)
-
-@tree.command(name="deleteserverallwebhook", description="Delete ALL webhooks from Roblox server")
-async def deleteserverallwebhook_command(interaction: discord.Interaction):
-    if not is_admin(interaction):
-        await interaction.response.send_message("Admin only.", ephemeral=True)
-        return
-    await interaction.response.defer()
-    # Logic already in help/stats suggests it should exist
-    view = DeleteWebhooksConfirmView(interaction.user)
-    await interaction.followup.send("⚠️ Are you sure you want to delete ALL webhooks?", view=view)
-
-@tree.command(name="checkwebhooks", description="Check webhooks status")
-async def checkwebhooks_command(interaction: discord.Interaction):
-    await interaction.response.defer()
-    try:
-        res = requests.get(f"{API_URL}/check_webhooks", timeout=5)
-        data = res.json()
-        count = len(data.get('webhooks', []))
-        await interaction.followup.send(f"Found {count} active webhooks.")
-    except:
-        await interaction.followup.send("Failed to check webhooks.")
-
-@tree.command(name="checking", description="Detailed server status")
-async def checking_command(interaction: discord.Interaction):
-    await interaction.response.defer()
-    await interaction.followup.send("Server check completed. System status: Online.")
-
 @tree.command(name="help", description="Show commands")
 async def help_command(interaction: discord.Interaction):
     embed = ModerationEmbed(
