@@ -8,7 +8,9 @@ from discord.ext import commands
 from discord import app_commands
 from discord.ui import View, Button
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
+import traceback
 
 load_dotenv()
 
@@ -56,7 +58,7 @@ class ConfirmActionView(View):
     @discord.ui.button(label="Confirm", style=discord.ButtonStyle.danger, emoji="⚡")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(" This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session.", ephemeral=True)
             return
 
         button.disabled = True
@@ -84,9 +86,26 @@ class ConfirmActionView(View):
                     "username": self.username
                 }
             elif self.action == "mute":
-                data = {"command": self.action, "userid": self.userid, "reason": self.reason, "duration": self.duration, "executor": interaction.user.name}
+                # Parse duration string to minutes
+                duration_minutes = self._parse_duration(self.duration)
+                if duration_minutes <= 0:
+                    await interaction.edit_original_response(content="Invalid duration format. Use: 1h, 30m, 2d", view=None)
+                    return
+
+                data = {
+                    "command": self.action, 
+                    "userid": self.userid, 
+                    "reason": self.reason, 
+                    "duration": duration_minutes, 
+                    "executor": interaction.user.name
+                }
             else:
-                data = {"command": self.action, "userid": self.userid, "reason": self.reason, "executor": interaction.user.name}
+                data = {
+                    "command": self.action, 
+                    "userid": self.userid, 
+                    "reason": self.reason, 
+                    "executor": interaction.user.name
+                }
 
             logger.info(f"Sending command to API: {data}")
             response = requests.post(f"{API_URL}/send_command", json=data, timeout=10)
@@ -166,6 +185,7 @@ class ConfirmActionView(View):
                     moderator=interaction.user
                 )
                 embed.add_field(name="Reason", value=self.reason, inline=False)
+                embed.add_field(name="Duration", value=self.duration, inline=True)
             else:
                 embed = ModerationEmbed(
                     title="✅ Action Completed",
@@ -180,7 +200,28 @@ class ConfirmActionView(View):
         except requests.exceptions.Timeout:
             await interaction.edit_original_response(content="Server timeout.", view=None)
         except Exception as e:
+            logger.error(f"Error in confirm action: {str(e)}")
             await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
+
+    def _parse_duration(self, duration_str: str) -> int:
+        """Parse duration string like '1h', '30m', '2d' to minutes"""
+        try:
+            if not duration_str:
+                return 0
+
+            duration_str = duration_str.lower().strip()
+
+            if duration_str.endswith('m'):
+                return int(duration_str[:-1])
+            elif duration_str.endswith('h'):
+                return int(duration_str[:-1]) * 60
+            elif duration_str.endswith('d'):
+                return int(duration_str[:-1]) * 1440
+            else:
+                # Assume minutes if no unit specified
+                return int(duration_str)
+        except:
+            return 0
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
@@ -207,60 +248,67 @@ def save_banlist_to_disk(bans: list) -> str:
         "bans": bans
     }
 
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
 
-    # Also save in text format for readability
-    txt_filename = f"banlist_{timestamp}.txt"
-    txt_filepath = os.path.join(BANLIST_DIR, txt_filename)
+        # Also save in text format for readability
+        txt_filename = f"banlist_{timestamp}.txt"
+        txt_filepath = os.path.join(BANLIST_DIR, txt_filename)
 
-    with open(txt_filepath, 'w', encoding='utf-8') as f:
-        f.write("=" * 70 + "\n")
-        f.write(f"SERVER BAN LIST\n")
-        f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"Total bans: {len(bans)}\n")
-        f.write("=" * 70 + "\n\n")
+        with open(txt_filepath, 'w', encoding='utf-8') as f:
+            f.write("=" * 70 + "\n")
+            f.write(f"SERVER BAN LIST\n")
+            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Total bans: {len(bans)}\n")
+            f.write("=" * 70 + "\n\n")
 
-        if not bans:
-            f.write("No bans found.\n")
-        else:
-            for i, ban in enumerate(bans, 1):
-                userid = ban.get('userid', 'Unknown')
-                username = ban.get('username', 'Unknown')
-                display_name = ban.get('display_name', username)
-                reason = ban.get('reason', 'No reason')
-                executor = ban.get('executor', 'Unknown')
-                timestamp_ban = ban.get('timestamp', 0)
-                duration = ban.get('duration', -1)
-                ban_type = ban.get('banType', 'normal')
+            if not bans:
+                f.write("No bans found.\n")
+            else:
+                for i, ban in enumerate(bans, 1):
+                    userid = ban.get('userid', 'Unknown')
+                    username = ban.get('username', 'Unknown')
+                    display_name = ban.get('display_name', username)
+                    reason = ban.get('reason', 'No reason')
+                    executor = ban.get('executor', 'Unknown')
+                    timestamp_ban = ban.get('timestamp', 0)
+                    duration = ban.get('duration', -1)
+                    ban_type = ban.get('banType', 'normal')
 
-                if timestamp_ban and timestamp_ban != 'Unknown':
-                    try:
-                        date_str = datetime.fromtimestamp(timestamp_ban).strftime('%Y-%m-%d %H:%M')
-                    except:
-                        date_str = str(timestamp_ban)
-                else:
-                    date_str = "N/A"
+                    if timestamp_ban and timestamp_ban != 'Unknown':
+                        try:
+                            if isinstance(timestamp_ban, (int, float)):
+                                date_str = datetime.fromtimestamp(timestamp_ban).strftime('%Y-%m-%d %H:%M')
+                            else:
+                                date_str = str(timestamp_ban)
+                        except:
+                            date_str = str(timestamp_ban)
+                    else:
+                        date_str = "N/A"
 
-                duration_text = "Permanent" if duration == -1 else f"{duration} days"
-                ban_type_text = "PC Ban" if ban_type == "pc" else "Normal Ban"
+                    duration_text = "Permanent" if duration == -1 else f"{duration} days"
+                    ban_type_text = "PC Ban" if ban_type == "pc" else "Normal Ban"
 
-                # Format user display for file
-                if display_name != username and display_name:
-                    user_display = f"{username} (@{display_name})"
-                else:
-                    user_display = username
+                    # Format user display for file
+                    if display_name != username and display_name:
+                        user_display = f"{username} (@{display_name})"
+                    else:
+                        user_display = username
 
-                f.write(f"#{i:3d} {ban_type_text.upper():10} {user_display}\n")
-                f.write(f"     ID: {userid}\n")
-                f.write(f"     Reason: {reason}\n")
-                f.write(f"     Duration: {duration_text}\n")
-                f.write(f"     Banned by: {executor}\n")
-                f.write(f"     Date: {date_str}\n")
-                f.write("-" * 50 + "\n")
+                    f.write(f"#{i:3d} {ban_type_text.upper():10} {user_display}\n")
+                    f.write(f"     ID: {userid}\n")
+                    f.write(f"     Reason: {reason}\n")
+                    f.write(f"     Duration: {duration_text}\n")
+                    f.write(f"     Banned by: {executor}\n")
+                    f.write(f"     Date: {date_str}\n")
+                    f.write("-" * 50 + "\n")
 
-    logger.info(f"Banlist saved: {filename} and {txt_filename}")
-    return filepath
+        logger.info(f"Banlist saved: {filename} and {txt_filename}")
+        return filepath
+    except Exception as e:
+        logger.error(f"Failed to save banlist: {str(e)}")
+        return ""
 
 class BanListView(View):
     def __init__(self, bans: list, interaction_user: discord.User, page: int = 1, saved_filename: str = None):
@@ -272,10 +320,11 @@ class BanListView(View):
         self.interaction_user = interaction_user
         self.saved_filename = saved_filename
 
+        # Disable buttons if on first/last page
         if self.page <= 1:
-            self.children[0].disabled = True
+            self.previous_page.disabled = True
         if self.page >= self.total_pages:
-            self.children[1].disabled = True
+            self.next_page.disabled = True
 
     def get_embed(self):
         start_idx = (self.page - 1) * self.items_per_page
@@ -310,7 +359,10 @@ class BanListView(View):
 
             if timestamp and timestamp != 'Unknown':
                 try:
-                    date_str = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
+                    if isinstance(timestamp, (int, float)):
+                        date_str = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
+                    else:
+                        date_str = str(timestamp)
                 except:
                     date_str = str(timestamp)
             else:
@@ -442,7 +494,7 @@ class UnbanView(View):
     @discord.ui.button(label="Confirm Unban", style=discord.ButtonStyle.success, emoji="✅")
     async def confirm_unban(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(" Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
         button.disabled = True
@@ -647,7 +699,7 @@ class AnnounceView(View):
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(" Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
         await interaction.response.edit_message(content="Announcement cancelled.", embed=None, view=None)
@@ -797,6 +849,141 @@ class CleanNotesView(View):
 
         await interaction.response.edit_message(content="Clean notes cancelled.", embed=None, view=None)
 
+class WarnView(View):
+    def __init__(self, userid: str, reason: str, username: str, interaction_user: discord.User):
+        super().__init__(timeout=60)
+        self.userid = userid
+        self.reason = reason
+        self.username = username
+        self.interaction_user = interaction_user
+
+    @discord.ui.button(label="Confirm Warn", style=discord.ButtonStyle.secondary, emoji="⚠️")
+    async def confirm(self, interaction: discord.Interaction, button: Button):
+        if interaction.user != self.interaction_user:
+            await interaction.response.send_message("Not your session.", ephemeral=True)
+            return
+
+        button.disabled = True
+        button.label = "Processing..."
+        await interaction.response.edit_message(view=self)
+
+        try:
+            warning_data = {
+                "command": "warn",
+                "userid": self.userid,
+                "reason": self.reason,
+                "executor": interaction.user.name
+            }
+            response = requests.post(f"{API_URL}/send_command", json=warning_data, timeout=10)
+            response.raise_for_status()
+
+            embed = ModerationEmbed(
+                title="Player Warned",
+                description=f"**{self.username}** has been warned.",
+                color=discord.Color.orange(),
+                target_user=f"{self.username} ({self.userid})",
+                moderator=interaction.user
+            )
+            embed.add_field(name="Reason", value=self.reason, inline=False)
+
+            await interaction.edit_original_response(content=None, embed=embed, view=None)
+
+        except Exception as e:
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
+    async def cancel(self, interaction: discord.Interaction, button: Button):
+        if interaction.user != self.interaction_user:
+            await interaction.response.send_message("Not your session.", ephemeral=True)
+            return
+
+        await interaction.response.edit_message(content="Warn cancelled.", embed=None, view=None)
+
+class DeleteWebhooksConfirmView(View):
+    def __init__(self, interaction_user: discord.User, webhook_count: int = 0):
+        super().__init__(timeout=60)
+        self.interaction_user = interaction_user
+        self.webhook_count = webhook_count
+
+    @discord.ui.button(label="Delete ALL Webhooks", style=discord.ButtonStyle.danger, emoji="🗑️")
+    async def confirm(self, interaction: discord.Interaction, button: Button):
+        if interaction.user != self.interaction_user:
+            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            return
+
+        button.disabled = True
+        button.label = "Deleting..."
+        await interaction.response.edit_message(view=self)
+
+        try:
+            # Отправляем команду на удаление
+            response = requests.post(
+                f"{API_URL}/deleteserverallwebhook",
+                json={
+                    "command": "deleteserverallwebhook",
+                    "executor": interaction.user.name
+                },
+                timeout=10
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+
+                if data.get("success"):
+                    deleted_count = data.get("deleted_count", self.webhook_count)
+
+                    embed = ModerationEmbed(
+                        title="✅ Webhooks Deleted",
+                        description=f"Successfully removed **{deleted_count}** webhook(s) from Roblox server",
+                        color=discord.Color.green(),
+                        moderator=interaction.user
+                    )
+
+                    embed.add_field(
+                        name="🔧 Result",
+                        value="• All webhook connections cleared\n• External integrations stopped\n• Server is now clean",
+                        inline=False
+                    )
+
+                    embed.add_field(
+                        name="⚠️ Note",
+                        value="Server may need to be restarted for changes to take full effect",
+                        inline=False
+                    )
+                else:
+                    embed = ModerationEmbed(
+                        title="❌ Failed",
+                        description=f"Error: {data.get('error', 'Unknown error')}",
+                        color=discord.Color.red(),
+                        moderator=interaction.user
+                    )
+            else:
+                embed = ModerationEmbed(
+                    title="❌ Server Error",
+                    description=f"Status: {response.status_code}",
+                    color=discord.Color.red(),
+                    moderator=interaction.user
+                )
+
+            await interaction.edit_original_response(embed=embed, view=None)
+
+        except Exception as e:
+            embed = ModerationEmbed(
+                title="❌ Error",
+                description=f"Failed to delete webhooks: {str(e)}",
+                color=discord.Color.red(),
+                moderator=interaction.user
+            )
+            await interaction.edit_original_response(embed=embed, view=None)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
+    async def cancel(self, interaction: discord.Interaction, button: Button):
+        if interaction.user != self.interaction_user:
+            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            return
+
+        await interaction.response.edit_message(content="❌ Operation cancelled.", embed=None, view=None)
+
 def is_authorized(interaction: discord.Interaction) -> bool:
     if ALLOWED_ROLE_ID == 0: 
         return True
@@ -817,10 +1004,13 @@ async def get_roblox_user_data(userid: str):
         thumb_res = requests.get(f"https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds={userid}&size=420x420&format=Png", timeout=5)
         avatar = None
         if thumb_res.status_code == 200:
-            avatar = thumb_res.json()["data"][0]["imageUrl"]
+            thumb_data = thumb_res.json()
+            if "data" in thumb_data and len(thumb_data["data"]) > 0:
+                avatar = thumb_data["data"][0]["imageUrl"]
 
-        return {"name": data["name"], "display": data["displayName"], "avatar": avatar}
-    except:
+        return {"name": data.get("name", "Unknown"), "display": data.get("displayName", data.get("name", "Unknown")), "avatar": avatar}
+    except Exception as e:
+        logger.error(f"Failed to get Roblox user data: {str(e)}")
         return None
 
 def check_api():
@@ -832,9 +1022,12 @@ def check_api():
 
 @bot.event
 async def on_ready():
-    await tree.sync()
-    logger.info(f"Bot ready: {bot.user}")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="for /help"))
+    try:
+        await tree.sync()
+        logger.info(f"Bot ready: {bot.user}")
+        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="for /help"))
+    except Exception as e:
+        logger.error(f"Error in on_ready: {str(e)}")
 
 # ===== РОГАРД КОМАНДЫ LEVEL 1 =====
 
@@ -910,6 +1103,28 @@ async def mute_command(interaction: discord.Interaction, userid: str, duration: 
         embed = ModerationEmbed(
             title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
+        return
+
+    # Parse duration to ensure it's valid
+    try:
+        if duration.lower().endswith('m'):
+            minutes = int(duration[:-1])
+        elif duration.lower().endswith('h'):
+            minutes = int(duration[:-1]) * 60
+        elif duration.lower().endswith('d'):
+            minutes = int(duration[:-1]) * 1440
+        else:
+            minutes = int(duration)
+
+        if minutes <= 0:
+            raise ValueError("Duration must be positive")
+    except:
+        embed = ModerationEmbed(
+            title="Invalid Duration",
+            description="Duration must be positive number with unit (ex: 1h, 30m, 2d)",
             color=discord.Color.red()
         )
         await interaction.followup.send(embed=embed)
@@ -1103,7 +1318,7 @@ async def userinfo_command(interaction: discord.Interaction, userid: str):
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title=" Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -1297,7 +1512,7 @@ async def cleanotes_command(interaction: discord.Interaction, userid: str):
 
     await interaction.followup.send(embed=embed, view=CleanNotesView(userid, data['name'], data['display'], interaction.user))
 
-# ===== СУЩЕСТВУЮЩИЕ КОМАНДЫ (остаются без изменений) =====
+# ===== СУЩЕСТВУЮЩИЕ КОМАНДЫ =====
 
 @tree.command(name="ping", description="Check bot status")
 async def ping_command(interaction: discord.Interaction):
@@ -1374,10 +1589,6 @@ async def ban_command(interaction: discord.Interaction, userid: str, reason: str
 
     await interaction.followup.send(embed=embed, view=ConfirmActionView("ban", userid, reason, data['name'], interaction.user, duration, ban_type=ban_type))
 
-
-
-
-
 @tree.command(name="check", description="Check server status")
 async def check_command(interaction: discord.Interaction):
     try:
@@ -1419,13 +1630,6 @@ async def check_command(interaction: discord.Interaction):
             color=discord.Color.red()
         )
         await interaction.response.send_message(embed=embed)
-
-
-
-
-
-
-
 
 @tree.command(name="banlist", description="View bans (automatically saves to server files)")
 async def banlist_command(interaction: discord.Interaction):
@@ -1687,6 +1891,10 @@ async def players_command(interaction: discord.Interaction):
         await interaction.followup.send(embed=embed)
 
 @tree.command(name="warn", description="Warn a player")
+@app_commands.describe(
+    userid="Roblox UserID",
+    reason="Warning reason"
+)
 async def warn_command(interaction: discord.Interaction, userid: str, reason: str):
     if not is_authorized(interaction):
         await interaction.response.send_message("No permission.", ephemeral=True)
@@ -1712,56 +1920,6 @@ async def warn_command(interaction: discord.Interaction, userid: str, reason: st
         )
         await interaction.followup.send(embed=embed)
         return
-
-    class WarnView(View):
-        def __init__(self, userid: str, reason: str, username: str, interaction_user: discord.User):
-            super().__init__(timeout=60)
-            self.userid = userid
-            self.reason = reason
-            self.username = username
-            self.interaction_user = interaction_user
-
-        @discord.ui.button(label="Confirm Warn", style=discord.ButtonStyle.warning, emoji="⚠️")
-        async def confirm(self, interaction: discord.Interaction, button: Button):
-            if interaction.user != self.interaction_user:
-                await interaction.response.send_message("Not your session.", ephemeral=True)
-                return
-
-            button.disabled = True
-            button.label = "Processing..."
-            await interaction.response.edit_message(view=self)
-
-            try:
-                warning_data = {
-                    "command": "warn",
-                    "userid": self.userid,
-                    "reason": self.reason,
-                    "executor": interaction.user.name
-                }
-                response = requests.post(f"{API_URL}/send_command", json=warning_data, timeout=10)
-                response.raise_for_status()
-
-                embed = ModerationEmbed(
-                    title="Player Warned",
-                    description=f"**{self.username}** has been warned.",
-                    color=discord.Color.orange(),
-                    target_user=f"{self.username} ({self.userid})",
-                    moderator=interaction.user
-                )
-                embed.add_field(name="Reason", value=self.reason, inline=False)
-
-                await interaction.edit_original_response(content=None, embed=embed, view=None)
-
-            except Exception as e:
-                await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
-
-        @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
-        async def cancel(self, interaction: discord.Interaction, button: Button):
-            if interaction.user != self.interaction_user:
-                await interaction.response.send_message("Not your session.", ephemeral=True)
-                return
-
-            await interaction.response.edit_message(content="Warn cancelled.", embed=None, view=None)
 
     embed = ModerationEmbed(
         title="Confirm Warning",
@@ -1903,7 +2061,7 @@ async def find_command(interaction: discord.Interaction, username: str):
             await interaction.followup.send(embed=embed)
         else:
             embed = ModerationEmbed(
-                title= "Error",
+                title="Error",
                 description="Cannot search for players.",
                 color=discord.Color.red()
             )
@@ -2247,11 +2405,6 @@ async def unBanAsync_command(interaction: discord.Interaction, userid: str):
         )
         await interaction.followup.send(embed=embed)
 
-
-
-
-
-
 @tree.command(name="checkwebhooks", description="Check webhooks status on Roblox server")
 async def checkwebhooks_command(interaction: discord.Interaction):
     if not is_authorized(interaction):
@@ -2340,96 +2493,6 @@ async def checkwebhooks_command(interaction: discord.Interaction):
         )
         await interaction.followup.send(embed=embed)
 
-
-
-
-
-
-class DeleteWebhooksConfirmView(View):
-    def __init__(self, interaction_user: discord.User, webhook_count: int = 0):
-        super().__init__(timeout=60)
-        self.interaction_user = interaction_user
-        self.webhook_count = webhook_count
-
-    @discord.ui.button(label="Delete ALL Webhooks", style=discord.ButtonStyle.danger, emoji="🗑️")
-    async def confirm(self, interaction: discord.Interaction, button: Button):
-        if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
-            return
-
-        button.disabled = True
-        button.label = "Deleting..."
-        await interaction.response.edit_message(view=self)
-
-        try:
-            # Отправляем команду на удаление
-            response = requests.post(
-                f"{API_URL}/deleteserverallwebhook",
-                json={
-                    "command": "deleteserverallwebhook",
-                    "executor": interaction.user.name
-                },
-                timeout=10
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-
-                if data.get("success"):
-                    deleted_count = data.get("deleted_count", self.webhook_count)
-
-                    embed = ModerationEmbed(
-                        title="✅ Webhooks Deleted",
-                        description=f"Successfully removed **{deleted_count}** webhook(s) from Roblox server",
-                        color=discord.Color.green(),
-                        moderator=interaction.user
-                    )
-
-                    embed.add_field(
-                        name="🔧 Result",
-                        value="• All webhook connections cleared\n• External integrations stopped\n• Server is now clean",
-                        inline=False
-                    )
-
-                    embed.add_field(
-                        name="⚠️ Note",
-                        value="Server may need to be restarted for changes to take full effect",
-                        inline=False
-                    )
-                else:
-                    embed = ModerationEmbed(
-                        title="❌ Failed",
-                        description=f"Error: {data.get('error', 'Unknown error')}",
-                        color=discord.Color.red(),
-                        moderator=interaction.user
-                    )
-            else:
-                embed = ModerationEmbed(
-                    title="❌ Server Error",
-                    description=f"Status: {response.status_code}",
-                    color=discord.Color.red(),
-                    moderator=interaction.user
-                )
-
-            await interaction.edit_original_response(embed=embed, view=None)
-
-        except Exception as e:
-            embed = ModerationEmbed(
-                title="❌ Error",
-                description=f"Failed to delete webhooks: {str(e)}",
-                color=discord.Color.red(),
-                moderator=interaction.user
-            )
-            await interaction.edit_original_response(embed=embed, view=None)
-
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
-    async def cancel(self, interaction: discord.Interaction, button: Button):
-        if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
-            return
-
-        await interaction.response.edit_message(content="❌ Operation cancelled.", embed=None, view=None)
-
 @tree.command(name="deleteserverallwebhook", description="Delete ALL webhooks from Roblox server (Admin)")
 async def deleteserverallwebhook_command(interaction: discord.Interaction):
     if not is_admin(interaction):
@@ -2503,7 +2566,6 @@ async def deleteserverallwebhook_command(interaction: discord.Interaction):
 
         await interaction.followup.send(embed=embed, view=DeleteWebhooksConfirmView(interaction.user))
 
-
 @tree.command(name="serverstats", description="Show server resource statistics")
 async def serverstats_command(interaction: discord.Interaction):
     if not is_admin(interaction):
@@ -2523,6 +2585,9 @@ async def serverstats_command(interaction: discord.Interaction):
                 description="Real-time server performance metrics",
                 color=discord.Color.blue()
             )
+
+            cpu_percent = 0
+            memory_percent = 0
 
             # CPU Usage
             if 'cpu' in data:
@@ -2606,8 +2671,6 @@ async def serverstats_command(interaction: discord.Interaction):
         )
         await interaction.followup.send(embed=embed)
 
-
-
 @tree.command(name="help", description="Show commands")
 async def help_command(interaction: discord.Interaction):
     embed = ModerationEmbed(
@@ -2642,8 +2705,8 @@ async def help_command(interaction: discord.Interaction):
 `/warn [id] [reason]` - Warn player
 `/pcban [id] [reason]` - PC BanAsync player
 `/unpcban [id]` - Remove PC ban
-`/BanAsync [id] [reason]` - Async ban
-`/unBanAsync [id]` - Async unban""",
+`/banasync [id] [reason]` - Async ban
+`/unbanasync [id]` - Async unban""",
         inline=False
     )
 
@@ -2654,7 +2717,7 @@ async def help_command(interaction: discord.Interaction):
 `/find [name]` - Find player
 `/lookup [id]` - Player history
 `/stats` - Server statistics
-`/checking` - Detailed server status""",
+`/check` - Detailed server status""",  # Fixed: changed /checking to /check
         inline=False
     )
 
@@ -2691,11 +2754,11 @@ async def cmds_command(interaction: discord.Interaction):
 `/announcement`, `/cleanotes`
 
 **Moderation:**
-`/ban`, `/unban`, `/warn`, `/pcban`, `/unpcban`, `/BanAsync`, `/unBanAsync`
+`/ban`, `/unban`, `/warn`, `/pcban`, `/unpcban`, `/banasync`, `/unbanasync`
 
 **Players & Lists:**
 `/banlist` - Auto-saves to server
-`/players`, `/find`, `/lookup`, `/stats`, `/checking`
+`/players`, `/find`, `/lookup`, `/stats`, `/check`  # Fixed: changed /checking to /check
 
 **Server:**
 `/check`, `/ping`, `/logs`, `/checkwebhooks`
@@ -2719,7 +2782,12 @@ def run():
         logger.info("PC Ban system: ✅ Enabled")
         logger.info("Webhook Tools: ✅ Enabled")
         logger.info(f"Banlist Auto-save: ✅ ALWAYS enabled (saves to {BANLIST_DIR}/)")
-        bot.run(TOKEN)
+        try:
+            bot.run(TOKEN)
+        except Exception as e:
+            logger.error(f"Failed to start bot: {str(e)}")
     else:
         logger.error("No token found.")
 
+if __name__ == "__main__":
+    run()
