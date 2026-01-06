@@ -56,7 +56,7 @@ class ConfirmActionView(View):
     @discord.ui.button(label="Confirm", style=discord.ButtonStyle.danger, emoji="⚡")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ This is not your session.", ephemeral=True)
+            await interaction.response.send_message(" This is not your session.", ephemeral=True)
             return
 
         button.disabled = True
@@ -176,19 +176,19 @@ class ConfirmActionView(View):
 
             await interaction.edit_original_response(content=None, embed=embed, view=None)
         except requests.exceptions.ConnectionError:
-            await interaction.edit_original_response(content="❌ Failed to connect to game server.", view=None)
+            await interaction.edit_original_response(content="Failed to connect to game server.", view=None)
         except requests.exceptions.Timeout:
-            await interaction.edit_original_response(content="⏰ Server timeout.", view=None)
+            await interaction.edit_original_response(content="Server timeout.", view=None)
         except Exception as e:
-            await interaction.edit_original_response(content=f"❌ Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session.", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="❌ Action cancelled.", embed=None, view=None)
+        await interaction.response.edit_message(content="Action cancelled.", embed=None, view=None)
 
 def save_banlist_to_disk(bans: list) -> str:
     """Save banlist to disk and return file path"""
@@ -333,7 +333,7 @@ class BanListView(View):
         # Add save information
         if self.saved_filename:
             embed.add_field(
-                name="💾 Auto-saved",
+                name="Auto-saved",
                 value=f"Ban list automatically saved to server files.",
                 inline=False
             )
@@ -344,7 +344,7 @@ class BanListView(View):
     @discord.ui.button(label="◀ Previous", style=discord.ButtonStyle.secondary)
     async def previous_page(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
         if self.page > 1:
@@ -355,7 +355,7 @@ class BanListView(View):
     @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.secondary)
     async def next_page(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
         if self.page < self.total_pages:
@@ -363,10 +363,10 @@ class BanListView(View):
             embed = self.get_embed()
             await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label="🔄 Refresh", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Refresh", style=discord.ButtonStyle.primary)
     async def refresh_list(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
         await interaction.response.defer()
@@ -421,15 +421,15 @@ class BanListView(View):
 
         except Exception as e:
             logger.error(f"Failed to refresh banlist: {str(e)}")
-            await interaction.followup.send("❌ Failed to refresh.", ephemeral=True)
+            await interaction.followup.send("Failed to refresh.", ephemeral=True)
 
     @discord.ui.button(label="❌ Close", style=discord.ButtonStyle.danger)
     async def close_view(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="✅ Closed.", embed=None, view=None)
+        await interaction.response.edit_message(content="Closed.", embed=None, view=None)
 
 class UnbanView(View):
     def __init__(self, userid: str, username: str, interaction_user: discord.User, ban_type: str = "normal"):
@@ -442,7 +442,7 @@ class UnbanView(View):
     @discord.ui.button(label="Confirm Unban", style=discord.ButtonStyle.success, emoji="✅")
     async def confirm_unban(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message(" Not your session.", ephemeral=True)
             return
 
         button.disabled = True
@@ -474,15 +474,15 @@ class UnbanView(View):
 
         except Exception as e:
             logger.error(f"Failed to unban: {str(e)}")
-            await interaction.edit_original_response(content=f"❌ Failed to unban: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Failed to unban: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="❌ Cancelled.", embed=None, view=None)
+        await interaction.response.edit_message(content="Cancelled.", embed=None, view=None)
 
 class PCBanView(View):
     def __init__(self, userid: str, reason: str, username: str, display_name: str, interaction_user: discord.User):
@@ -496,7 +496,7 @@ class PCBanView(View):
     @discord.ui.button(label="Confirm PC Ban", style=discord.ButtonStyle.danger, emoji="💻")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session.", ephemeral=True)
             return
 
         button.disabled = True
@@ -518,7 +518,7 @@ class PCBanView(View):
             logger.info(f"PC ban response: {response.status_code} - {response.text}")
 
             embed = ModerationEmbed(
-                title="✅ PC Ban Executed",
+                title="PC Ban Executed",
                 description=f"**{self.username}** has been PC banned.",
                 color=discord.Color.red(),
                 target_user=f"{self.username} (@{self.display_name})",
@@ -531,20 +531,20 @@ class PCBanView(View):
             await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except requests.exceptions.ConnectionError:
-            await interaction.edit_original_response(content="❌ Failed to connect to game server.", view=None)
+            await interaction.edit_original_response(content="Failed to connect to game server.", view=None)
         except requests.exceptions.Timeout:
-            await interaction.edit_original_response(content="⏰ Server timeout.", view=None)
+            await interaction.edit_original_response(content="Server timeout.", view=None)
         except Exception as e:
             logger.error(f"PC ban error: {str(e)}")
-            await interaction.edit_original_response(content=f"❌ Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session.", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="❌ PC Ban cancelled.", embed=None, view=None)
+        await interaction.response.edit_message(content="PC Ban cancelled.", embed=None, view=None)
 
 class UnPCBanView(View):
     def __init__(self, userid: str, username: str, display_name: str, interaction_user: discord.User):
@@ -557,7 +557,7 @@ class UnPCBanView(View):
     @discord.ui.button(label="Confirm Unban", style=discord.ButtonStyle.success, emoji="✅")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session.", ephemeral=True)
             return
 
         button.disabled = True
@@ -579,7 +579,7 @@ class UnPCBanView(View):
             logger.info(f"PC unban response: {response.status_code} - {response.text}")
 
             embed = ModerationEmbed(
-                title="✅ PC Unban Executed",
+                title="PC Unban Executed",
                 description=f"**{self.username}** has been PC unbanned.",
                 color=discord.Color.green(),
                 target_user=f"{self.username} (@{self.display_name})",
@@ -591,20 +591,20 @@ class UnPCBanView(View):
             await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except requests.exceptions.ConnectionError:
-            await interaction.edit_original_response(content="❌ Failed to connect to game server.", view=None)
+            await interaction.edit_original_response(content="Failed to connect to game server.", view=None)
         except requests.exceptions.Timeout:
-            await interaction.edit_original_response(content="⏰ Server timeout.", view=None)
+            await interaction.edit_original_response(content="Server timeout.", view=None)
         except Exception as e:
             logger.error(f"PC unban error: {str(e)}")
-            await interaction.edit_original_response(content=f"❌ Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session.", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="❌ PC Unban cancelled.", embed=None, view=None)
+        await interaction.response.edit_message(content="PC Unban cancelled.", embed=None, view=None)
 
 class AnnounceView(View):
     def __init__(self, message: str, interaction_user: discord.User):
@@ -615,7 +615,7 @@ class AnnounceView(View):
     @discord.ui.button(label="Send Announcement", style=discord.ButtonStyle.primary, emoji="📢")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
         button.disabled = True
@@ -632,7 +632,7 @@ class AnnounceView(View):
             response.raise_for_status()
 
             embed = ModerationEmbed(
-                title="✅ Announcement Sent",
+                title="Announcement Sent",
                 description="Announcement has been sent to all players.",
                 color=discord.Color.green(),
                 moderator=interaction.user
@@ -642,15 +642,15 @@ class AnnounceView(View):
             await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except Exception as e:
-            await interaction.edit_original_response(content=f"❌ Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message(" Not your session.", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="❌ Announcement cancelled.", embed=None, view=None)
+        await interaction.response.edit_message(content="Announcement cancelled.", embed=None, view=None)
 
 class BroadcastView(View):
     def __init__(self, message: str, interaction_user: discord.User):
@@ -661,7 +661,7 @@ class BroadcastView(View):
     @discord.ui.button(label="Send Broadcast", style=discord.ButtonStyle.primary, emoji="📡")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
         button.disabled = True
@@ -678,7 +678,7 @@ class BroadcastView(View):
             response.raise_for_status()
 
             embed = ModerationEmbed(
-                title="✅ Broadcast Sent",
+                title="Broadcast Sent",
                 description="Message broadcasted to all players.",
                 color=discord.Color.blue(),
                 moderator=interaction.user
@@ -688,15 +688,15 @@ class BroadcastView(View):
             await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except Exception as e:
-            await interaction.edit_original_response(content=f"❌ Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="❌ Broadcast cancelled.", embed=None, view=None)
+        await interaction.response.edit_message(content="Broadcast cancelled.", embed=None, view=None)
 
 class NoteView(View):
     def __init__(self, userid: str, note: str, username: str, display_name: str, interaction_user: discord.User):
@@ -710,7 +710,7 @@ class NoteView(View):
     @discord.ui.button(label="Confirm Note", style=discord.ButtonStyle.primary, emoji="📝")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
         button.disabled = True
@@ -728,7 +728,7 @@ class NoteView(View):
             response.raise_for_status()
 
             embed = ModerationEmbed(
-                title="✅ Note Added",
+                title="Note Added",
                 description=f"**{self.username}** has a new note.",
                 color=discord.Color.green(),
                 target_user=f"{self.username} (@{self.display_name})",
@@ -744,10 +744,10 @@ class NoteView(View):
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="❌ Note cancelled.", embed=None, view=None)
+        await interaction.response.edit_message(content="Note cancelled.", embed=None, view=None)
 
 class CleanNotesView(View):
     def __init__(self, userid: str, username: str, display_name: str, interaction_user: discord.User):
@@ -760,7 +760,7 @@ class CleanNotesView(View):
     @discord.ui.button(label="Confirm Clean Notes", style=discord.ButtonStyle.danger, emoji="🧹")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
         button.disabled = True
@@ -777,7 +777,7 @@ class CleanNotesView(View):
             response.raise_for_status()
 
             embed = ModerationEmbed(
-                title="✅ Notes Cleaned",
+                title="Notes Cleaned",
                 description=f"All notes for **{self.username}** have been removed.",
                 color=discord.Color.green(),
                 target_user=f"{self.username} (@{self.display_name})",
@@ -787,28 +787,24 @@ class CleanNotesView(View):
             await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except Exception as e:
-            await interaction.edit_original_response(content=f"❌ Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            await interaction.response.send_message("Not your session.", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="❌ Clean notes cancelled.", embed=None, view=None)
+        await interaction.response.edit_message(content="Clean notes cancelled.", embed=None, view=None)
 
 def is_authorized(interaction: discord.Interaction) -> bool:
     if ALLOWED_ROLE_ID == 0: 
         return True
-    if not isinstance(interaction.user, discord.Member):
-        return False
     return any(role.id == ALLOWED_ROLE_ID for role in interaction.user.roles)
 
 def is_admin(interaction: discord.Interaction) -> bool:
     if ADMIN_ROLE_ID == 0:
         return True
-    if not isinstance(interaction.user, discord.Member):
-        return False
     return any(role.id == ADMIN_ROLE_ID for role in interaction.user.roles)
 
 async def get_roblox_user_data(userid: str):
@@ -849,14 +845,14 @@ async def on_ready():
 )
 async def kick_command(interaction: discord.Interaction, userid: str, reason: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -866,7 +862,7 @@ async def kick_command(interaction: discord.Interaction, userid: str, reason: st
     data = await get_roblox_user_data(userid)
     if not data:
         embed = ModerationEmbed(
-            title="❌ User not found",
+            title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
             color=discord.Color.red()
         )
@@ -874,7 +870,7 @@ async def kick_command(interaction: discord.Interaction, userid: str, reason: st
         return
 
     embed = ModerationEmbed(
-        title="⚠️ Confirm Kick",
+        title="Confirm Kick",
         description=f"Kick **{data['name']}**?",
         color=discord.Color.orange(),
         target_user=f"{data['name']} (@{data['display']})",
@@ -895,14 +891,14 @@ async def kick_command(interaction: discord.Interaction, userid: str, reason: st
 )
 async def mute_command(interaction: discord.Interaction, userid: str, duration: str, reason: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -912,7 +908,7 @@ async def mute_command(interaction: discord.Interaction, userid: str, duration: 
     data = await get_roblox_user_data(userid)
     if not data:
         embed = ModerationEmbed(
-            title="❌ User not found",
+            title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
             color=discord.Color.red()
         )
@@ -920,7 +916,7 @@ async def mute_command(interaction: discord.Interaction, userid: str, duration: 
         return
 
     embed = ModerationEmbed(
-        title="🔇 Confirm Mute",
+        title="Confirm Mute",
         description=f"Mute **{data['name']}** for {duration}?",
         color=discord.Color.dark_grey(),
         target_user=f"{data['name']} (@{data['display']})",
@@ -940,14 +936,14 @@ async def mute_command(interaction: discord.Interaction, userid: str, duration: 
 )
 async def umute_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -957,7 +953,7 @@ async def umute_command(interaction: discord.Interaction, userid: str):
     data = await get_roblox_user_data(userid)
     if not data:
         embed = ModerationEmbed(
-            title="❌ User not found",
+            title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
             color=discord.Color.red()
         )
@@ -965,7 +961,7 @@ async def umute_command(interaction: discord.Interaction, userid: str):
         return
 
     embed = ModerationEmbed(
-        title="🔊 Confirm Unmute",
+        title="Confirm Unmute",
         description=f"Unmute **{data['name']}**?",
         color=discord.Color.green(),
         target_user=f"{data['name']} (@{data['display']})",
@@ -983,14 +979,14 @@ async def umute_command(interaction: discord.Interaction, userid: str):
 )
 async def userlogs_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -1000,7 +996,7 @@ async def userlogs_command(interaction: discord.Interaction, userid: str):
     data = await get_roblox_user_data(userid)
     if not data:
         embed = ModerationEmbed(
-            title="❌ User not found",
+            title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
             color=discord.Color.red()
         )
@@ -1011,7 +1007,7 @@ async def userlogs_command(interaction: discord.Interaction, userid: str):
         response = requests.get(f"{API_URL}/user_logs?userid={userid}", timeout=10)
 
         embed = ModerationEmbed(
-            title="📋 User Logs",
+            title="User Logs",
             description=f"Moderation history for **{data['name']}**",
             color=discord.Color.blue(),
             target_user=f"{data['name']} (@{data['display']})",
@@ -1043,7 +1039,7 @@ async def userlogs_command(interaction: discord.Interaction, userid: str):
 
     except Exception as e:
         embed = ModerationEmbed(
-            title="❌ Error",
+            title="Error",
             description=f"Cannot get user logs: {str(e)}",
             color=discord.Color.red()
         )
@@ -1056,14 +1052,14 @@ async def userlogs_command(interaction: discord.Interaction, userid: str):
 )
 async def addnote_command(interaction: discord.Interaction, userid: str, note: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -1073,7 +1069,7 @@ async def addnote_command(interaction: discord.Interaction, userid: str, note: s
     data = await get_roblox_user_data(userid)
     if not data:
         embed = ModerationEmbed(
-            title="❌ User not found",
+            title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
             color=discord.Color.red()
         )
@@ -1081,7 +1077,7 @@ async def addnote_command(interaction: discord.Interaction, userid: str, note: s
         return
 
     embed = ModerationEmbed(
-        title="📝 Confirm Note",
+        title="Confirm Note",
         description=f"Add note to **{data['name']}**?",
         color=discord.Color.blue(),
         target_user=f"{data['name']} (@{data['display']})",
@@ -1100,14 +1096,14 @@ async def addnote_command(interaction: discord.Interaction, userid: str, note: s
 )
 async def userinfo_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title=" Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -1117,7 +1113,7 @@ async def userinfo_command(interaction: discord.Interaction, userid: str):
     data = await get_roblox_user_data(userid)
     if not data:
         embed = ModerationEmbed(
-            title="❌ User not found",
+            title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
             color=discord.Color.red()
         )
@@ -1143,7 +1139,7 @@ async def userinfo_command(interaction: discord.Interaction, userid: str):
         pass
 
     embed = ModerationEmbed(
-        title="👤 User Information",
+        title="User Information",
         description=f"Roblox profile information",
         color=discord.Color.blue()
     )
@@ -1156,14 +1152,14 @@ async def userinfo_command(interaction: discord.Interaction, userid: str):
     embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
 
     if is_banned:
-        ban_status = "🔨 Banned"
+        ban_status = "Banned"
         if ban_type == "pc":
             ban_status = "💻 PC Banned"
         embed.add_field(name="Ban Status", value=ban_status, inline=True)
         embed.add_field(name="Ban Reason", value=ban_reason, inline=False)
         embed.add_field(name="Ban Type", value="PC Ban" if ban_type == "pc" else "Normal Ban", inline=True)
     else:
-        embed.add_field(name="Ban Status", value="✅ Not banned", inline=True)
+        embed.add_field(name="Ban Status", value="Not banned", inline=True)
 
     await interaction.followup.send(embed=embed)
 
@@ -1173,14 +1169,14 @@ async def userinfo_command(interaction: discord.Interaction, userid: str):
 )
 async def gameinfo_command(interaction: discord.Interaction, placeid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not placeid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid Place ID",
+            title="Invalid Place ID",
             description="Place ID must be numbers only.",
             color=discord.Color.red()
         )
@@ -1215,13 +1211,13 @@ async def gameinfo_command(interaction: discord.Interaction, placeid: str):
                     pass
             else:
                 embed = ModerationEmbed(
-                    title="❌ Game Not Found",
+                    title="Game Not Found",
                     description=f"Place ID `{placeid}` not found on Roblox.",
                     color=discord.Color.red()
                 )
         else:
             embed = ModerationEmbed(
-                title="❌ Error",
+                title="Error",
                 description=f"Failed to get game info: {response.status_code}",
                 color=discord.Color.red()
             )
@@ -1230,7 +1226,7 @@ async def gameinfo_command(interaction: discord.Interaction, placeid: str):
 
     except Exception as e:
         embed = ModerationEmbed(
-            title="❌ Error",
+            title="Error",
             description=f"Cannot get game info: {str(e)}",
             color=discord.Color.red()
         )
@@ -1244,11 +1240,11 @@ async def gameinfo_command(interaction: discord.Interaction, placeid: str):
 )
 async def announcement_command(interaction: discord.Interaction, message: str):
     if not is_admin(interaction):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only.", ephemeral=True)
         return
 
     embed = ModerationEmbed(
-        title="📢 Announcement Confirmation",
+        title="Announcement Confirmation",
         description=f"Send this announcement to all players?",
         color=discord.Color.gold(),
         moderator=interaction.user
@@ -1263,14 +1259,14 @@ async def announcement_command(interaction: discord.Interaction, message: str):
 )
 async def cleanotes_command(interaction: discord.Interaction, userid: str):
     if not is_admin(interaction):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -1280,7 +1276,7 @@ async def cleanotes_command(interaction: discord.Interaction, userid: str):
     data = await get_roblox_user_data(userid)
     if not data:
         embed = ModerationEmbed(
-            title="❌ User not found",
+            title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
             color=discord.Color.red()
         )
@@ -1288,7 +1284,7 @@ async def cleanotes_command(interaction: discord.Interaction, userid: str):
         return
 
     embed = ModerationEmbed(
-        title="🧹 Confirm Clean Notes",
+        title="Confirm Clean Notes",
         description=f"Remove ALL notes for **{data['name']}**?",
         color=discord.Color.orange(),
         target_user=f"{data['name']} (@{data['display']})",
@@ -1309,13 +1305,13 @@ async def ping_command(interaction: discord.Interaction):
     api_status = check_api()
 
     embed = ModerationEmbed(
-        title="🏓 Ping",
+        title="Ping",
         description="Bot status check",
         color=discord.Color.blue()
     )
 
     embed.add_field(name="Bot Latency", value=f"{latency}ms", inline=True)
-    embed.add_field(name="API Status", value="✅ Online" if api_status else "❌ Offline", inline=True)
+    embed.add_field(name="API Status", value="Online" if api_status else "Offline", inline=True)
 
     await interaction.response.send_message(embed=embed)
 
@@ -1328,14 +1324,14 @@ async def ping_command(interaction: discord.Interaction):
 )
 async def ban_command(interaction: discord.Interaction, userid: str, reason: str, duration: int = -1, ban_type: str = "normal"):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -1345,7 +1341,7 @@ async def ban_command(interaction: discord.Interaction, userid: str, reason: str
     data = await get_roblox_user_data(userid)
     if not data:
         embed = ModerationEmbed(
-            title="❌ User not found",
+            title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
             color=discord.Color.red()
         )
@@ -1363,7 +1359,7 @@ async def ban_command(interaction: discord.Interaction, userid: str, reason: str
     ban_type_display = "PC Ban" if ban_type == "pc" else "Normal Ban"
 
     embed = ModerationEmbed(
-        title=f"⚠️ Confirm {ban_type_display}",
+        title=f"Confirm {ban_type_display}",
         description=f"{ban_type_display} **{data['name']}**?",
         color=discord.Color.dark_red() if ban_type == "pc" else discord.Color.orange(),
         target_user=f"{data['name']} (@{data['display']})",
@@ -1377,6 +1373,10 @@ async def ban_command(interaction: discord.Interaction, userid: str, reason: str
     embed.add_field(name="Type", value=ban_type_display, inline=True)
 
     await interaction.followup.send(embed=embed, view=ConfirmActionView("ban", userid, reason, data['name'], interaction.user, duration, ban_type=ban_type))
+
+
+
+
 
 @tree.command(name="check", description="Check server status")
 async def check_command(interaction: discord.Interaction):
@@ -1414,16 +1414,23 @@ async def check_command(interaction: discord.Interaction):
         await interaction.response.send_message(embed=embed)
     except:
         embed = ModerationEmbed(
-            title="❌ Server Error",
+            title="Server Error",
             description="Cannot connect to server.",
             color=discord.Color.red()
         )
         await interaction.response.send_message(embed=embed)
 
+
+
+
+
+
+
+
 @tree.command(name="banlist", description="View bans (automatically saves to server files)")
 async def banlist_command(interaction: discord.Interaction):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -1476,7 +1483,7 @@ async def banlist_command(interaction: discord.Interaction):
     except Exception as e:
         logger.error(f"Error getting/saving banlist: {str(e)}")
         embed = ModerationEmbed(
-            title="❌ Connection Error",
+            title="Connection Error",
             description="Cannot get ban list.",
             color=discord.Color.red()
         )
@@ -1489,14 +1496,14 @@ async def banlist_command(interaction: discord.Interaction):
 )
 async def unban_command(interaction: discord.Interaction, userid: str, ban_type: str = "auto"):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -1516,7 +1523,7 @@ async def unban_command(interaction: discord.Interaction, userid: str, ban_type:
 
         if not user_ban:
             embed = ModerationEmbed(
-                title="❌ Not banned",
+                title="Not banned",
                 description=f"UserID `{userid}` is not banned.",
                 color=discord.Color.orange()
             )
@@ -1531,7 +1538,7 @@ async def unban_command(interaction: discord.Interaction, userid: str, ban_type:
             detected_ban_type = ban_type
 
         embed = ModerationEmbed(
-            title=f"⚠️ Confirm {'PC ' if detected_ban_type == 'pc' else ''}Unban",
+            title=f"Confirm {'PC ' if detected_ban_type == 'pc' else ''}Unban",
             description=f"{'PC ' if detected_ban_type == 'pc' else ''}Unban **{username}**?",
             color=discord.Color.gold(),
             target_user=f"{username} ({userid})",
@@ -1549,7 +1556,7 @@ async def unban_command(interaction: discord.Interaction, userid: str, ban_type:
 
     except:
         embed = ModerationEmbed(
-            title="❌ Error",
+            title="Error",
             description="Cannot process unban.",
             color=discord.Color.red()
         )
@@ -1558,11 +1565,11 @@ async def unban_command(interaction: discord.Interaction, userid: str, ban_type:
 @tree.command(name="restart", description="Restart server (Admin)")
 async def restart_command(interaction: discord.Interaction):
     if not is_admin(interaction):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only.", ephemeral=True)
         return
 
     embed = ModerationEmbed(
-        title="⚠️ Restart Server",
+        title="Restart Server",
         description="Restart the game server?",
         color=discord.Color.orange(),
         moderator=interaction.user
@@ -1575,11 +1582,11 @@ async def restart_command(interaction: discord.Interaction):
 @tree.command(name="shutdown", description="Shutdown server (Admin)")
 async def shutdown_command(interaction: discord.Interaction):
     if not is_admin(interaction):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only.", ephemeral=True)
         return
 
     embed = ModerationEmbed(
-        title="⚠️ Shutdown Server",
+        title="Shutdown Server",
         description="Shutdown the game server?",
         color=discord.Color.red(),
         moderator=interaction.user
@@ -1592,7 +1599,7 @@ async def shutdown_command(interaction: discord.Interaction):
 @tree.command(name="players", description="Show detailed online player list")
 async def players_command(interaction: discord.Interaction):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -1612,7 +1619,7 @@ async def players_command(interaction: discord.Interaction):
                 response = requests.get(endpoint, timeout=5)
                 if response.status_code == 200:
                     data = response.json()
-                    print(f"✅ {endpoint} returned: {type(data)} - {str(data)[:100]}")
+                    print(f"{endpoint} returned: {type(data)} - {str(data)[:100]}")
 
                     if isinstance(data, list):
                         players = data
@@ -1632,7 +1639,7 @@ async def players_command(interaction: discord.Interaction):
                 continue
 
         embed = ModerationEmbed(
-            title="👥 Online Players",
+            title="Online Players",
             description=f"**Total online:** {len(players)}",
             color=discord.Color.green()
         )
@@ -1673,7 +1680,7 @@ async def players_command(interaction: discord.Interaction):
 
     except Exception as e:
         embed = ModerationEmbed(
-            title="❌ Error",
+            title="Error",
             description=f"Cannot get player list: {str(e)}",
             color=discord.Color.red()
         )
@@ -1682,14 +1689,14 @@ async def players_command(interaction: discord.Interaction):
 @tree.command(name="warn", description="Warn a player")
 async def warn_command(interaction: discord.Interaction, userid: str, reason: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -1699,7 +1706,7 @@ async def warn_command(interaction: discord.Interaction, userid: str, reason: st
     data = await get_roblox_user_data(userid)
     if not data:
         embed = ModerationEmbed(
-            title="❌ User not found",
+            title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
             color=discord.Color.red()
         )
@@ -1717,7 +1724,7 @@ async def warn_command(interaction: discord.Interaction, userid: str, reason: st
         @discord.ui.button(label="Confirm Warn", style=discord.ButtonStyle.warning, emoji="⚠️")
         async def confirm(self, interaction: discord.Interaction, button: Button):
             if interaction.user != self.interaction_user:
-                await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+                await interaction.response.send_message("Not your session.", ephemeral=True)
                 return
 
             button.disabled = True
@@ -1735,7 +1742,7 @@ async def warn_command(interaction: discord.Interaction, userid: str, reason: st
                 response.raise_for_status()
 
                 embed = ModerationEmbed(
-                    title="⚠️ Player Warned",
+                    title="Player Warned",
                     description=f"**{self.username}** has been warned.",
                     color=discord.Color.orange(),
                     target_user=f"{self.username} ({self.userid})",
@@ -1746,18 +1753,18 @@ async def warn_command(interaction: discord.Interaction, userid: str, reason: st
                 await interaction.edit_original_response(content=None, embed=embed, view=None)
 
             except Exception as e:
-                await interaction.edit_original_response(content=f"❌ Error: {str(e)}", view=None)
+                await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
         @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
         async def cancel(self, interaction: discord.Interaction, button: Button):
             if interaction.user != self.interaction_user:
-                await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+                await interaction.response.send_message("Not your session.", ephemeral=True)
                 return
 
-            await interaction.response.edit_message(content="❌ Warn cancelled.", embed=None, view=None)
+            await interaction.response.edit_message(content="Warn cancelled.", embed=None, view=None)
 
     embed = ModerationEmbed(
-        title="⚠️ Confirm Warning",
+        title="Confirm Warning",
         description=f"Warn **{data['name']}**?",
         color=discord.Color.gold(),
         target_user=f"{data['name']} (@{data['display']})",
@@ -1797,23 +1804,23 @@ async def stats_command(interaction: discord.Interaction):
                     normal_bans += 1
 
         embed = ModerationEmbed(
-            title="📊 Server Statistics",
+            title="Server Statistics",
             description="Current server statistics",
             color=discord.Color.purple()
         )
 
-        embed.add_field(name="👥 Online Players", value=str(player_count), inline=True)
-        embed.add_field(name="🔨 Total Bans", value=str(ban_count), inline=True)
-        embed.add_field(name="🔨 Normal Bans", value=str(normal_bans), inline=True)
-        embed.add_field(name="💻 PC Bans", value=str(pc_bans), inline=True)
-        embed.add_field(name="🌐 API Status", value="✅ Online", inline=True)
-        embed.add_field(name="🤖 Bot Status", value="✅ Online", inline=True)
+        embed.add_field(name="Online Players", value=str(player_count), inline=True)
+        embed.add_field(name="Total Bans", value=str(ban_count), inline=True)
+        embed.add_field(name="Normal Bans", value=str(normal_bans), inline=True)
+        embed.add_field(name="PC Bans", value=str(pc_bans), inline=True)
+        embed.add_field(name="API Status", value="Online", inline=True)
+        embed.add_field(name="Bot Status", value="Online", inline=True)
 
         await interaction.followup.send(embed=embed)
 
     except Exception as e:
         embed = ModerationEmbed(
-            title="❌ Error",
+            title="Error",
             description=f"Cannot get statistics: {str(e)}",
             color=discord.Color.red()
         )
@@ -1825,11 +1832,11 @@ async def stats_command(interaction: discord.Interaction):
 )
 async def announce_command(interaction: discord.Interaction, message: str):
     if not is_admin(interaction):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only.", ephemeral=True)
         return
 
     embed = ModerationEmbed(
-        title="📢 Announcement Confirmation",
+        title="Announcement Confirmation",
         description=f"Send this announcement to all players?",
         color=discord.Color.gold(),
         moderator=interaction.user
@@ -1844,11 +1851,11 @@ async def announce_command(interaction: discord.Interaction, message: str):
 )
 async def broadcast_command(interaction: discord.Interaction, message: str):
     if not is_admin(interaction):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only.", ephemeral=True)
         return
 
     embed = ModerationEmbed(
-        title="📡 Broadcast Confirmation",
+        title="Broadcast Confirmation",
         description=f"Send this broadcast to all players?",
         color=discord.Color.blue(),
         moderator=interaction.user
@@ -1863,7 +1870,7 @@ async def broadcast_command(interaction: discord.Interaction, message: str):
 )
 async def find_command(interaction: discord.Interaction, username: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -1875,14 +1882,14 @@ async def find_command(interaction: discord.Interaction, username: str):
             player_count = players_data.get('count', 0)
 
             embed = ModerationEmbed(
-                title="🔍 Player Search",
+                title="Player Search",
                 description=f"Searching for '{username}'",
                 color=discord.Color.blue()
             )
 
             if player_count > 0:
                 embed.add_field(
-                    name="ℹ️ Information",
+                    name="Information",
                     value=f"Found {player_count} player(s) online.\nNote: Detailed search requires player list API.",
                     inline=False
                 )
@@ -1896,7 +1903,7 @@ async def find_command(interaction: discord.Interaction, username: str):
             await interaction.followup.send(embed=embed)
         else:
             embed = ModerationEmbed(
-                title="❌ Error",
+                title= "Error",
                 description="Cannot search for players.",
                 color=discord.Color.red()
             )
@@ -1904,7 +1911,7 @@ async def find_command(interaction: discord.Interaction, username: str):
 
     except Exception as e:
         embed = ModerationEmbed(
-            title="❌ Error",
+            title="Error",
             description=f"Search failed: {str(e)}",
             color=discord.Color.red()
         )
@@ -1916,14 +1923,14 @@ async def find_command(interaction: discord.Interaction, username: str):
 )
 async def lookup_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -1949,7 +1956,7 @@ async def lookup_command(interaction: discord.Interaction, userid: str):
                     break
 
         embed = ModerationEmbed(
-            title="📋 Player Lookup",
+            title="Player Lookup",
             description=f"Information for **{username}**",
             color=discord.Color.blue()
         )
@@ -1963,9 +1970,9 @@ async def lookup_command(interaction: discord.Interaction, userid: str):
         embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
 
         if is_banned:
-            ban_status = "🔨 Banned"
+            ban_status = "Banned"
             if ban_type == "pc":
-                ban_status = "💻 PC Banned"
+                ban_status = "PC Banned"
             embed.add_field(name="Ban Status", value=ban_status, inline=True)
             embed.add_field(name="Ban Reason", value=ban_reason, inline=False)
             embed.add_field(name="Ban Type", value="PC Ban" if ban_type == "pc" else "Normal Ban", inline=True)
@@ -1973,7 +1980,7 @@ async def lookup_command(interaction: discord.Interaction, userid: str):
             embed.add_field(name="Ban Status", value="✅ Not banned", inline=True)
 
         embed.add_field(
-            name="ℹ️ Additional Info",
+            name="Additional Info",
             value="More detailed history requires player history API.",
             inline=False
         )
@@ -1982,7 +1989,7 @@ async def lookup_command(interaction: discord.Interaction, userid: str):
 
     except Exception as e:
         embed = ModerationEmbed(
-            title="❌ Error",
+            title="Error",
             description=f"Cannot lookup player: {str(e)}",
             color=discord.Color.red()
         )
@@ -1994,7 +2001,7 @@ async def lookup_command(interaction: discord.Interaction, userid: str):
 )
 async def logs_command(interaction: discord.Interaction, lines: int = 10):
     if not is_admin(interaction):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only.", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2003,7 +2010,7 @@ async def logs_command(interaction: discord.Interaction, lines: int = 10):
         logs_res = requests.get(f"{API_URL}/get_logs?lines={lines}", timeout=10)
 
         embed = ModerationEmbed(
-            title="📜 Server Logs",
+            title="Server Logs",
             description=f"Recent server activity",
             color=discord.Color.dark_grey()
         )
@@ -2034,7 +2041,7 @@ async def logs_command(interaction: discord.Interaction, lines: int = 10):
 
     except Exception as e:
         embed = ModerationEmbed(
-            title="❌ Error",
+            title="Error",
             description=f"Cannot get logs: {str(e)}",
             color=discord.Color.red()
         )
@@ -2047,14 +2054,14 @@ async def logs_command(interaction: discord.Interaction, lines: int = 10):
 )
 async def pcban_command(interaction: discord.Interaction, userid: str, reason: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -2064,7 +2071,7 @@ async def pcban_command(interaction: discord.Interaction, userid: str, reason: s
     data = await get_roblox_user_data(userid)
     if not data:
         embed = ModerationEmbed(
-            title="❌ User not found",
+            title="User not found",
             description=f"ID `{userid}` not found on Roblox.",
             color=discord.Color.red()
         )
@@ -2079,7 +2086,7 @@ async def pcban_command(interaction: discord.Interaction, userid: str, reason: s
             for ban in bans:
                 if str(ban.get('userid')) == userid:
                     embed = ModerationEmbed(
-                        title="⚠️ Already Banned",
+                        title="Already Banned",
                         description=f"**{data['name']}** is already banned.",
                         color=discord.Color.orange(),
                         target_user=f"{data['name']} (@{data['display']})",
@@ -2094,7 +2101,7 @@ async def pcban_command(interaction: discord.Interaction, userid: str, reason: s
         pass
 
     embed = ModerationEmbed(
-        title="💻 Confirm PC Ban",
+        title="Confirm PC Ban",
         description=f"PC Ban **{data['name']}**?",
         color=discord.Color.dark_red(),
         target_user=f"{data['name']} (@{data['display']})",
@@ -2107,7 +2114,7 @@ async def pcban_command(interaction: discord.Interaction, userid: str, reason: s
     embed.add_field(name="Ban Type", value="PC Ban (Device-based)", inline=True)
 
     embed.add_field(
-        name="⚠️ Warning",
+        name="Warning",
         value="PC bans are device-based and permanent. Player cannot join from the banned device even with different accounts.",
         inline=False
     )
@@ -2120,14 +2127,14 @@ async def pcban_command(interaction: discord.Interaction, userid: str, reason: s
 )
 async def unpcban_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
         embed = ModerationEmbed(
-            title="❌ Invalid ID",
+            title="Invalid ID",
             description="UserID must be numbers only.",
             color=discord.Color.red()
         )
@@ -2139,7 +2146,7 @@ async def unpcban_command(interaction: discord.Interaction, userid: str):
     display_name = data['display'] if data else username
 
     embed = ModerationEmbed(
-        title="💻 Confirm PC Unban",
+        title="Confirm PC Unban",
         description=f"PC Unban **{username}**?",
         color=discord.Color.gold(),
         target_user=f"{username} ({userid})",
@@ -2156,7 +2163,7 @@ async def unpcban_command(interaction: discord.Interaction, userid: str):
 @tree.command(name="banasync", description="Ban a player by userid")
 async def BanAsync_command(interaction: discord.Interaction, userid: str, reason: str = "Banned by admin"):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2176,13 +2183,13 @@ async def BanAsync_command(interaction: discord.Interaction, userid: str, reason
 
         if response.status_code == 200:
             embed = ModerationEmbed(
-                title="✅ Player Banned",
+                title="Player Banned",
                 description=f"**Player:** {username}\n**UserID:** `{userid}`\n**Reason:** {reason}",
                 color=discord.Color.green()
             )
         else:
             embed = ModerationEmbed(
-                title="❌ Ban Failed",
+                title="Ban Failed",
                 description=f"Error: {response.status_code}",
                 color=discord.Color.red()
             )
@@ -2191,7 +2198,7 @@ async def BanAsync_command(interaction: discord.Interaction, userid: str, reason
 
     except Exception as e:
         embed = ModerationEmbed(
-            title="❌ Error",
+            title="Error",
             description=f"Failed: {str(e)}",
             color=discord.Color.red()
         )
@@ -2200,7 +2207,7 @@ async def BanAsync_command(interaction: discord.Interaction, userid: str, reason
 @tree.command(name="unbanasync", description="Unban a player by userid")
 async def unBanAsync_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        await interaction.response.send_message("No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2219,13 +2226,13 @@ async def unBanAsync_command(interaction: discord.Interaction, userid: str):
 
         if response.status_code == 200:
             embed = ModerationEmbed(
-                title="✅ Player Unbanned",
+                title="Player Unbanned",
                 description=f"**Player:** {username}\n**UserID:** `{userid}`",
                 color=discord.Color.green()
             )
         else:
             embed = ModerationEmbed(
-                title="❌ Unban Failed",
+                title="Unban Failed",
                 description=f"Error: {response.status_code}",
                 color=discord.Color.red()
             )
@@ -2234,22 +2241,383 @@ async def unBanAsync_command(interaction: discord.Interaction, userid: str):
 
     except Exception as e:
         embed = ModerationEmbed(
-            title="❌ Error",
+            title="Error",
             description=f"Failed: {str(e)}",
             color=discord.Color.red()
         )
         await interaction.followup.send(embed=embed)
 
+
+
+
+
+
+@tree.command(name="checkwebhooks", description="Check webhooks status on Roblox server")
+async def checkwebhooks_command(interaction: discord.Interaction):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    try:
+        # Проверяем статус вебхуков
+        response = requests.get(f"{API_URL}/check_webhooks", timeout=10)
+
+        if response.status_code == 200:
+            data = response.json()
+
+            embed = ModerationEmbed(
+                title="🔍 Webhooks Status",
+                description="Current webhooks configuration",
+                color=discord.Color.blue()
+            )
+
+            if 'webhooks' in data:
+                webhooks = data['webhooks']
+                webhook_count = len(webhooks)
+
+                if webhook_count == 0:
+                    embed.description = "No active webhooks found on server"
+                    embed.color = discord.Color.green()
+                    embed.add_field(
+                        name="✅ Status",
+                        value="Server is clean, no webhooks detected",
+                        inline=False
+                    )
+                else:
+                    embed.description = f"Found **{webhook_count}** active webhook(s)"
+                    embed.color = discord.Color.orange()
+
+                    # Показываем информацию о вебхуках
+                    for i, webhook in enumerate(webhooks[:5]):  # Максимум 5 вебхуков
+                        if isinstance(webhook, dict):
+                            name = webhook.get('name', f'Webhook {i+1}')
+                            url_preview = webhook.get('url', 'No URL')
+                            # Скрываем часть URL для безопасности
+                            if len(url_preview) > 40:
+                                url_preview = url_preview[:20] + "..." + url_preview[-20:]
+
+                            embed.add_field(
+                                name=f"🔗 {name}",
+                                value=f"URL: `{url_preview}`",
+                                inline=False
+                            )
+
+                    if webhook_count > 5:
+                        embed.add_field(
+                            name="And more...",
+                            value=f"{webhook_count - 5} more webhooks not shown",
+                            inline=False
+                        )
+
+                    embed.add_field(
+                        name="⚠️ Recommendation",
+                        value=f"Use `/deleteserverallwebhook` to remove all {webhook_count} webhooks",
+                        inline=False
+                    )
+            else:
+                embed.add_field(
+                    name="ℹ️ Information",
+                    value="Webhooks information not available",
+                    inline=False
+                )
+
+        else:
+            embed = ModerationEmbed(
+                title="❌ Cannot Check Webhooks",
+                description="Server does not support webhook checking",
+                color=discord.Color.red()
+            )
+
+        await interaction.followup.send(embed=embed)
+
+    except Exception as e:
+        embed = ModerationEmbed(
+            title="❌ Error",
+            description=f"Cannot check webhooks: {str(e)}",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
+
+
+
+
+
+
+class DeleteWebhooksConfirmView(View):
+    def __init__(self, interaction_user: discord.User, webhook_count: int = 0):
+        super().__init__(timeout=60)
+        self.interaction_user = interaction_user
+        self.webhook_count = webhook_count
+
+    @discord.ui.button(label="Delete ALL Webhooks", style=discord.ButtonStyle.danger, emoji="🗑️")
+    async def confirm(self, interaction: discord.Interaction, button: Button):
+        if interaction.user != self.interaction_user:
+            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            return
+
+        button.disabled = True
+        button.label = "Deleting..."
+        await interaction.response.edit_message(view=self)
+
+        try:
+            # Отправляем команду на удаление
+            response = requests.post(
+                f"{API_URL}/deleteserverallwebhook",
+                json={
+                    "command": "deleteserverallwebhook",
+                    "executor": interaction.user.name
+                },
+                timeout=10
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+
+                if data.get("success"):
+                    deleted_count = data.get("deleted_count", self.webhook_count)
+
+                    embed = ModerationEmbed(
+                        title="✅ Webhooks Deleted",
+                        description=f"Successfully removed **{deleted_count}** webhook(s) from Roblox server",
+                        color=discord.Color.green(),
+                        moderator=interaction.user
+                    )
+
+                    embed.add_field(
+                        name="🔧 Result",
+                        value="• All webhook connections cleared\n• External integrations stopped\n• Server is now clean",
+                        inline=False
+                    )
+
+                    embed.add_field(
+                        name="⚠️ Note",
+                        value="Server may need to be restarted for changes to take full effect",
+                        inline=False
+                    )
+                else:
+                    embed = ModerationEmbed(
+                        title="❌ Failed",
+                        description=f"Error: {data.get('error', 'Unknown error')}",
+                        color=discord.Color.red(),
+                        moderator=interaction.user
+                    )
+            else:
+                embed = ModerationEmbed(
+                    title="❌ Server Error",
+                    description=f"Status: {response.status_code}",
+                    color=discord.Color.red(),
+                    moderator=interaction.user
+                )
+
+            await interaction.edit_original_response(embed=embed, view=None)
+
+        except Exception as e:
+            embed = ModerationEmbed(
+                title="❌ Error",
+                description=f"Failed to delete webhooks: {str(e)}",
+                color=discord.Color.red(),
+                moderator=interaction.user
+            )
+            await interaction.edit_original_response(embed=embed, view=None)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
+    async def cancel(self, interaction: discord.Interaction, button: Button):
+        if interaction.user != self.interaction_user:
+            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+            return
+
+        await interaction.response.edit_message(content="❌ Operation cancelled.", embed=None, view=None)
+
+@tree.command(name="deleteserverallwebhook", description="Delete ALL webhooks from Roblox server (Admin)")
+async def deleteserverallwebhook_command(interaction: discord.Interaction):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    # Сначала проверяем сколько вебхуков
+    webhook_count = 0
+    try:
+        check_res = requests.get(f"{API_URL}/check_webhooks", timeout=5)
+        if check_res.status_code == 200:
+            data = check_res.json()
+            if 'webhooks' in data:
+                webhook_count = len(data['webhooks'])
+    except:
+        pass
+
+    if webhook_count > 0:
+        embed = ModerationEmbed(
+            title="⚠️ DELETE ALL WEBHOOKS",
+            description=f"**WARNING:** This will delete **{webhook_count}** webhook(s) from Roblox server!",
+            color=discord.Color.red(),
+            moderator=interaction.user
+        )
+
+        embed.add_field(
+            name="⚠️ What this does:",
+            value="""• Removes ALL webhook connections
+• Stops Discord/API integrations
+• May break server functionality
+• Action is PERMANENT""",
+            inline=False
+        )
+
+        embed.add_field(
+            name="📋 Found Webhooks:",
+            value=f"Detected **{webhook_count}** active webhook(s) on server",
+            inline=False
+        )
+
+        embed.add_field(
+            name="🔒 Confirm Action",
+            value="This action **cannot be undone**. Are you absolutely sure?",
+            inline=False
+        )
+
+        await interaction.followup.send(embed=embed, view=DeleteWebhooksConfirmView(interaction.user, webhook_count))
+
+    else:
+        # Если нет вебхуков или не можем проверить
+        embed = ModerationEmbed(
+            title="⚠️ DELETE ALL WEBHOOKS",
+            description="**WARNING:** This will delete ALL webhooks from Roblox server!",
+            color=discord.Color.red(),
+            moderator=interaction.user
+        )
+
+        embed.add_field(
+            name="⚠️ Danger Zone",
+            value="This command will permanently remove all webhook connections.",
+            inline=False
+        )
+
+        embed.add_field(
+            name="🔍 Status",
+            value="Could not check current webhooks. Proceed with caution.",
+            inline=False
+        )
+
+        await interaction.followup.send(embed=embed, view=DeleteWebhooksConfirmView(interaction.user))
+
+
+@tree.command(name="serverstats", description="Show server resource statistics")
+async def serverstats_command(interaction: discord.Interaction):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    try:
+        response = requests.get(f"{API_URL}/server_stats", timeout=10)
+
+        if response.status_code == 200:
+            data = response.json()
+
+            embed = ModerationEmbed(
+                title="📊 Server Resource Statistics",
+                description="Real-time server performance metrics",
+                color=discord.Color.blue()
+            )
+
+            # CPU Usage
+            if 'cpu' in data:
+                cpu_percent = data['cpu'].get('usage', 0)
+                cpu_color = discord.Color.green() if cpu_percent < 70 else discord.Color.orange() if cpu_percent < 90 else discord.Color.red()
+                embed.add_field(name="💻 CPU Usage", value=f"{cpu_percent}%", inline=True)
+
+            # Memory
+            if 'memory' in data:
+                memory_used = data['memory'].get('used', 0)
+                memory_total = data['memory'].get('total', 1)
+                memory_percent = (memory_used / memory_total) * 100
+                embed.add_field(name="🧠 Memory", value=f"{memory_percent:.1f}% used", inline=True)
+
+            # Uptime
+            if 'uptime' in data:
+                embed.add_field(name="🕒 Uptime", value=data['uptime'], inline=True)
+
+            # Network
+            if 'network' in data:
+                network_in = data['network'].get('in', 0)
+                network_out = data['network'].get('out', 0)
+                embed.add_field(name="📡 Network IN", value=f"{network_in} KB/s", inline=True)
+                embed.add_field(name="📡 Network OUT", value=f"{network_out} KB/s", inline=True)
+
+            # Players
+            if 'players' in data:
+                current = data['players'].get('current', 0)
+                max_players = data['players'].get('max', 100)
+                embed.add_field(name="👥 Players", value=f"{current}/{max_players}", inline=True)
+
+            # Health status
+            health_score = 100
+            if cpu_percent > 90:
+                health_score -= 30
+            if memory_percent > 90:
+                health_score -= 30
+
+            if health_score >= 80:
+                health_status = "✅ Excellent"
+                embed.color = discord.Color.green()
+            elif health_score >= 60:
+                health_status = "⚠️ Good"
+                embed.color = discord.Color.orange()
+            else:
+                health_status = "❌ Poor"
+                embed.color = discord.Color.red()
+
+            embed.add_field(name="❤️ Server Health", value=health_status, inline=False)
+
+        else:
+            # Fallback to basic info
+            try:
+                players_res = requests.get(f"{API_URL}/get_players", timeout=5)
+                player_count = players_res.json().get('count', 0) if players_res.status_code == 200 else 0
+
+                embed = ModerationEmbed(
+                    title="📊 Server Statistics",
+                    description="Basic server information",
+                    color=discord.Color.blue()
+                )
+
+                embed.add_field(name="👥 Online Players", value=str(player_count), inline=True)
+                embed.add_field(name="🕒 Status", value="✅ Online", inline=True)
+                embed.add_field(name="📊 Data", value="Limited metrics available", inline=False)
+
+            except:
+                embed = ModerationEmbed(
+                    title="❌ Unavailable",
+                    description="Server statistics are not available",
+                    color=discord.Color.red()
+                )
+
+        await interaction.followup.send(embed=embed)
+
+    except Exception as e:
+        embed = ModerationEmbed(
+            title="❌ Error",
+            description=f"Cannot fetch server stats: {str(e)}",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
+
+
+
 @tree.command(name="help", description="Show commands")
 async def help_command(interaction: discord.Interaction):
     embed = ModerationEmbed(
-        title="🤖 Kynx Commands Help",
+        title="Kynx Commands Help",
         description="Game server moderation bot - Full command list",
         color=discord.Color.blue()
     )
 
     embed.add_field(
-        name="🔨 **Kynx Level 1 Commands**",
+        name="**Kynx Level 1 Commands**",
         value="""`/kick [id] [reason]` - Kick player
 `/mute [id] [duration] [reason]` - Mute player
 `/umute [id]` - Remove mute
@@ -2261,14 +2629,14 @@ async def help_command(interaction: discord.Interaction):
     )
 
     embed.add_field(
-        name="🔨 **Kynx Level 3 Commands**",
+        name="**Kynx Level 3 Commands**",
         value="""`/announcement [message]` - Send announcement
-`/Cleanotes [id]` - Remove all notes""",
+`/cleanotes [id]` - Remove all notes""",
         inline=False
     )
 
     embed.add_field(
-        name="🔨 **Moderation Commands**",
+        name="**Moderation Commands**",
         value="""`/ban [id] [reason] [duration] [type]` - Ban player
 `/unban [id] [type]` - Unban player
 `/warn [id] [reason]` - Warn player
@@ -2280,86 +2648,78 @@ async def help_command(interaction: discord.Interaction):
     )
 
     embed.add_field(
-        name="📋 **Player & List Commands**",
+        name="**Player & List Commands**",
         value="""`/banlist` - View all bans (auto-saves to files)
 `/players` - Online players list
 `/find [name]` - Find player
 `/lookup [id]` - Player history
-`/stats` - Server statistics""",
+`/stats` - Server statistics
+`/checking` - Detailed server status""",
         inline=False
     )
 
     embed.add_field(
-        name="📊 **Server Info Commands**",
+        name="**Server Info Commands**",
         value="""`/check` - Player count
 `/ping` - Bot status
-`/logs [lines]` - View logs""",
+`/logs [lines]` - View logs
+`/checkwebhooks` - Check webhooks status""",
         inline=False
     )
 
     embed.add_field(
-        name="⚙️ **Admin Commands**",
+        name="**Admin Commands**",
         value="""`/restart` - Restart server
 `/shutdown` - Stop server
 `/announce [msg]` - Announcement
-`/broadcast [msg]` - Broadcast""",
+`/broadcast [msg]` - Broadcast
+`/deleteserverallwebhook` - Delete ALL webhooks""",
         inline=False
     )
 
-    embed.set_footer(text=f"Total commands: 27 • Version 4.0 • Auto-save Banlist: ✅ Server Files • Kynx System: ✅ Integrated")
+    embed.set_footer(text=f"Total commands: 29 • Version 5.0 • Auto-save Banlist: ✅ • Kynx System: ✅")
     await interaction.response.send_message(embed=embed)
 
 @tree.command(name="cmds", description="Show all commands (short version)")
 async def cmds_command(interaction: discord.Interaction):
     commands_list = """**Quick Commands List:**
 
-🔨 **Kynx Level 1:**
+**Kynx Level 1:**
 `/kick`, `/mute`, `/umute`, `/userlogs`, `/addnote`, `/userinfo`, `/gameinfo`
 
-🔨 **Kynx Level 3:**
-`/announcement`, `/Cleanotes`
+**Kynx Level 3:**
+`/announcement`, `/cleanotes`
 
-🔨 **Moderation:**
+**Moderation:**
 `/ban`, `/unban`, `/warn`, `/pcban`, `/unpcban`, `/BanAsync`, `/unBanAsync`
 
-📋 **Players & Lists:**
+**Players & Lists:**
 `/banlist` - Auto-saves to server
-`/players`, `/find`, `/lookup`, `/stats`
+`/players`, `/find`, `/lookup`, `/stats`, `/checking`
 
-📊 **Server:**
-`/check`, `/ping`, `/logs`
+**Server:**
+`/check`, `/ping`, `/logs`, `/checkwebhooks`
 
-⚙️ **Admin:**
-`/restart`, `/shutdown`, `/announce`, `/broadcast`"""
+**Admin:**
+`/restart`, `/shutdown`, `/announce`, `/broadcast`, `/deleteserverallwebhook`"""
 
     embed = ModerationEmbed(
-        title="📋 Quick Commands",
+        title="Quick Commands",
         description=commands_list,
         color=discord.Color.blue()
     )
-    embed.set_footer(text="Use /help for detailed information • Kynx System:✅Integrated")
+    embed.set_footer(text="Use /help for detailed information • Kynx System:✅")
     await interaction.response.send_message(embed=embed)
-
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound):
-        return
-    elif isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ No permission.", ephemeral=True)
-    else:
-        logger.error(f"Error: {str(error)}")
-        await ctx.send("❌ Error.", ephemeral=True)
 
 def run():
     if TOKEN:
-        logger.info("Starting bot...")
-        logger.info(f"Total commands loaded: 27")
+        logger.info("Starting Kynx bot...")
+        logger.info(f"Total commands loaded: 29")
         logger.info("Kynx System: ✅ Integrated")
         logger.info("PC Ban system: ✅ Enabled")
+        logger.info("Webhook Tools: ✅ Enabled")
         logger.info(f"Banlist Auto-save: ✅ ALWAYS enabled (saves to {BANLIST_DIR}/)")
         bot.run(TOKEN)
     else:
         logger.error("No token found.")
 
-if __name__ == "__main__":
-    run()
