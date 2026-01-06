@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 commands = []
-player_count = 0
+players = []  # List of dicts: {"userid": str, "username": str, "playtime": int}
 banned_user_ids = set()
 
 
@@ -40,16 +40,17 @@ def clear_commands():
 
 @app.route("/update_players", methods=["POST"])
 def update_players():
-    global player_count
+    global players
     data = request.json
-    player_count = data.get("count", 0)
-    print(f"Players: {player_count}")
+    # Expecting: {"players": [{"userid": "123", "username": "John", "playtime": 10}, ...]}
+    players = data.get("players", [])
+    print(f"Updated players list: {len(players)} players")
     return jsonify({"status": "updated"})
 
 
 @app.route("/get_players")
 def get_players():
-    return jsonify({"count": player_count})
+    return jsonify({"players": players, "count": len(players)})
 
 
 # === BAN SYSTEM ===

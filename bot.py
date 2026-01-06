@@ -500,8 +500,8 @@ async def unban_command(interaction: discord.Interaction, userid: str):
         )
         await interaction.followup.send(embed=embed)
 
-@tree.command(name="BanAsync", description="BanAsync a player by userid")
-async def BanAsync_command(interaction: discord.Interaction, userid: str, reason: str = "Banned by admin"):
+@tree.command(name="banasync", description="BanAsync a player by userid")
+async def banasync_command(interaction: discord.Interaction, userid: str, reason: str = "Banned by admin"):
     if not is_authorized(interaction):
         await interaction.response.send_message("❌ No permission.", ephemeral=True)
         return
@@ -544,8 +544,8 @@ async def BanAsync_command(interaction: discord.Interaction, userid: str, reason
         )
         await interaction.followup.send(embed=embed)
 
-@tree.command(name="unBanAsync", description="unBanAsync a player by userid")
-async def unBanAsync_command(interaction: discord.Interaction, userid: str):
+@tree.command(name="unbanasync", description="unBanAsync a player by userid")
+async def unbanasync_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
         await interaction.response.send_message("❌ No permission.", ephemeral=True)
         return
@@ -725,7 +725,7 @@ async def shutdown_command(interaction: discord.Interaction):
         )
         await interaction.followup.send(embed=embed)
 
-@tree.command(name="Cleanotes", description="Remove all moderation notes from a player")
+@tree.command(name="cleanotes", description="Remove all moderation notes from a player")
 async def cleanotes_command(interaction: discord.Interaction, userid: str):
     if not is_admin(interaction):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True)
@@ -783,6 +783,7 @@ async def players_command(interaction: discord.Interaction):
 
         if response.status_code == 200:
             data = response.json()
+            players_list = data.get('players', [])
             player_count = data.get('count', 0)
 
             embed = ModerationEmbed(
@@ -791,12 +792,22 @@ async def players_command(interaction: discord.Interaction):
                 color=discord.Color.green()
             )
 
-            for i in range(min(player_count, 10)):
-                embed.add_field(
-                    name=f"Player {i+1}",
-                    value=f"ID: `Unknown`\nPlaytime: 0m",
-                    inline=True
-                )
+            if not players_list:
+                if player_count > 0:
+                    embed.description += "\n\n(Player details not yet synced from game)"
+                else:
+                    embed.description = "No players currently online."
+            else:
+                for i, p in enumerate(players_list[:10]):
+                    username = p.get('username', 'Unknown')
+                    userid = p.get('userid', 'Unknown')
+                    playtime = p.get('playtime', 0)
+                    
+                    embed.add_field(
+                        name=f"#{i+1} {username}",
+                        value=f"ID: `{userid}`\nPlaytime: {playtime}m",
+                        inline=True
+                    )
 
             if player_count > 10:
                 embed.set_footer(text=f"And {player_count-10} more players...")
