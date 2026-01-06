@@ -800,11 +800,15 @@ class CleanNotesView(View):
 def is_authorized(interaction: discord.Interaction) -> bool:
     if ALLOWED_ROLE_ID == 0: 
         return True
+    if not isinstance(interaction.user, discord.Member):
+        return False
     return any(role.id == ALLOWED_ROLE_ID for role in interaction.user.roles)
 
 def is_admin(interaction: discord.Interaction) -> bool:
     if ADMIN_ROLE_ID == 0:
         return True
+    if not isinstance(interaction.user, discord.Member):
+        return False
     return any(role.id == ADMIN_ROLE_ID for role in interaction.user.roles)
 
 async def get_roblox_user_data(userid: str):
@@ -2239,13 +2243,13 @@ async def unBanAsync_command(interaction: discord.Interaction, userid: str):
 @tree.command(name="help", description="Show commands")
 async def help_command(interaction: discord.Interaction):
     embed = ModerationEmbed(
-        title="🤖 RoGuard Commands Help",
+        title="🤖 Kynx Commands Help",
         description="Game server moderation bot - Full command list",
         color=discord.Color.blue()
     )
 
     embed.add_field(
-        name="🔨 **RoGuard Level 1 Commands**",
+        name="🔨 **Kynx Level 1 Commands**",
         value="""`/kick [id] [reason]` - Kick player
 `/mute [id] [duration] [reason]` - Mute player
 `/umute [id]` - Remove mute
@@ -2257,7 +2261,7 @@ async def help_command(interaction: discord.Interaction):
     )
 
     embed.add_field(
-        name="🔨 **RoGuard Level 3 Commands**",
+        name="🔨 **Kynx Level 3 Commands**",
         value="""`/announcement [message]` - Send announcement
 `/Cleanotes [id]` - Remove all notes""",
         inline=False
@@ -2302,17 +2306,17 @@ async def help_command(interaction: discord.Interaction):
         inline=False
     )
 
-    embed.set_footer(text=f"Total commands: 27 • Version 4.0 • Auto-save Banlist: ✅ Server Files • RoGuard System: ✅ Integrated")
+    embed.set_footer(text=f"Total commands: 27 • Version 4.0 • Auto-save Banlist: ✅ Server Files • Kynx System: ✅ Integrated")
     await interaction.response.send_message(embed=embed)
 
 @tree.command(name="cmds", description="Show all commands (short version)")
 async def cmds_command(interaction: discord.Interaction):
     commands_list = """**Quick Commands List:**
 
-🔨 **RoGuard Level 1:**
+🔨 **Kynx Level 1:**
 `/kick`, `/mute`, `/umute`, `/userlogs`, `/addnote`, `/userinfo`, `/gameinfo`
 
-🔨 **RoGuard Level 3:**
+🔨 **Kynx Level 3:**
 `/announcement`, `/Cleanotes`
 
 🔨 **Moderation:**
@@ -2333,7 +2337,7 @@ async def cmds_command(interaction: discord.Interaction):
         description=commands_list,
         color=discord.Color.blue()
     )
-    embed.set_footer(text="Use /help for detailed information • RoGuard System: ✅ Integrated")
+    embed.set_footer(text="Use /help for detailed information • Kynx System:✅Integrated")
     await interaction.response.send_message(embed=embed)
 
 @bot.event
@@ -2350,7 +2354,7 @@ def run():
     if TOKEN:
         logger.info("Starting bot...")
         logger.info(f"Total commands loaded: 27")
-        logger.info("RoGuard System: ✅ Integrated")
+        logger.info("Kynx System: ✅ Integrated")
         logger.info("PC Ban system: ✅ Enabled")
         logger.info(f"Banlist Auto-save: ✅ ALWAYS enabled (saves to {BANLIST_DIR}/)")
         bot.run(TOKEN)
