@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 commands = []
-players = []  # List of dicts: {"userid": str, "username": str, "playtime": int}
+player_count = 0
 banned_user_ids = set()
 
 
@@ -16,14 +16,14 @@ def index():
 def send_command():
     data = request.json
     print(f"Get commands Discord bot: {data}")
-    
+
     # If it's a ban command, add to banned_user_ids
     if data.get("command") == "ban":
         userid = data.get("userid")
         if userid:
             banned_user_ids.add(int(userid))
             print(f"✅ Banned UserId via send_command: {userid}")
-            
+
     commands.append(data)
     return jsonify({"status": "OK"})
 
@@ -40,17 +40,16 @@ def clear_commands():
 
 @app.route("/update_players", methods=["POST"])
 def update_players():
-    global players
+    global player_count
     data = request.json
-    # Expecting: {"players": [{"userid": "123", "username": "John", "playtime": 10}, ...]}
-    players = data.get("players", [])
-    print(f"Updated players list: {len(players)} players")
+    player_count = data.get("count", 0)
+    print(f"Players: {player_count}")
     return jsonify({"status": "updated"})
 
 
 @app.route("/get_players")
 def get_players():
-    return jsonify({"players": players, "count": len(players)})
+    return jsonify({"count": player_count})
 
 
 # === BAN SYSTEM ===

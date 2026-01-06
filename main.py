@@ -3,7 +3,6 @@ import os
 import sys
 import time
 from dotenv import load_dotenv
-import server
 
 # Load environment variables from .env
 load_dotenv()
@@ -20,52 +19,43 @@ def check_environment():
 def run_flask():
     """Start the Flask API server."""
     try:
+        import server
         print("🌐 Starting Flask server on port 5000...")
         server.run()
     except Exception as e:
         print(f"❌ Flask server error: {e}")
 
 def run_discord():
-    """Start the Discord bot with simple retry logic for rate limits."""
-    retry_count = 0
-    max_retries = 3
-    retry_delay = 300 # 5 minutes
-
-    while retry_count < max_retries:
-        try:
-            import bot
-            # Ensure the bot.py has a run() function or logic to start
-            if hasattr(bot, 'run'):
-                print(f"🤖 Starting Discord bot (Attempt {retry_count + 1})...")
-                bot.run()
-                break # Exit loop if bot runs and finishes normally
-            else:
-                print("❌ Error: bot.py does not have a run() function.")
-                break
-        except Exception as e:
-            error_msg = str(e)
-            if "429" in error_msg or "Too Many Requests" in error_msg:
-                retry_count += 1
-                print(f"⚠️ Discord Rate Limit hit (429). Retrying in {retry_delay}s... ({retry_count}/{max_retries})")
-                time.sleep(retry_delay)
-            else:
-                print(f"❌ Discord bot error: {e}")
-                break
+    """Start the Discord bot."""
+    try:
+        import bot
+        # Ensure the bot.py has a run() function or logic to start
+        if hasattr(bot, 'run'):
+            print("🤖 Starting Discord bot...")
+            bot.run()
+        else:
+            print("❌ Error: bot.py does not have a run() function.")
+    except Exception as e:
+        print(f"❌ Discord bot error: {e}")
 
 if __name__ == "__main__":
     print("🚀 Initializing Roblox Moderation System...")
     print("=" * 50)
 
-    has_token = check_environment()
+    if not check_environment():
+        # We continue even if token is missing so the user can see the error in logs
+        pass
 
-    # Start Discord bot in a background thread if token is available
-    if has_token:
-        discord_thread = threading.Thread(target=run_discord, daemon=True)
-        discord_thread.start()
+    # Start Flask in a background thread
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
 
-    # Run Flask in the main thread (keeps the app running)
+    # Give Flask a moment to start up
+    time.sleep(2)
+
+    # Start the Discord bot in the main thread
     try:
-        run_flask()
+        run_discord()
     except KeyboardInterrupt:
         print("\n👋 Application stopped by user.")
         sys.exit(0)

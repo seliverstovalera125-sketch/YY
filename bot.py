@@ -2161,9 +2161,10 @@ async def unpcban_command(interaction: discord.Interaction, userid: str):
     await interaction.followup.send(embed=embed, view=UnPCBanView(userid, username, display_name, interaction.user))
 
 @tree.command(name="banasync", description="Ban a player by userid")
-async def BanAsync_command(interaction: discord.Interaction, userid: str, reason: str = "Banned by admin"):
+@app_commands.describe(userid="The Roblox user ID to ban", reason="Reason for the ban")
+async def banasync_command(interaction: discord.Interaction, userid: str, reason: str = "Banned by admin"):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.", ephemeral=True)
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2183,31 +2184,40 @@ async def BanAsync_command(interaction: discord.Interaction, userid: str, reason
 
         if response.status_code == 200:
             embed = ModerationEmbed(
-                title="Player Banned",
+                title="✅ Player Banned",
                 description=f"**Player:** {username}\n**UserID:** `{userid}`\n**Reason:** {reason}",
                 color=discord.Color.green()
             )
         else:
+            error_msg = response.text if response.text else f"Status: {response.status_code}"
             embed = ModerationEmbed(
-                title="Ban Failed",
-                description=f"Error: {response.status_code}",
+                title="❌ Ban Failed",
+                description=f"Error: {error_msg}",
                 color=discord.Color.red()
             )
 
         await interaction.followup.send(embed=embed)
 
+    except requests.exceptions.Timeout:
+        embed = ModerationEmbed(
+            title="❌ Timeout Error",
+            description="Request timed out. Server may be unavailable.",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
     except Exception as e:
         embed = ModerationEmbed(
-            title="Error",
-            description=f"Failed: {str(e)}",
+            title="❌ Error",
+            description=f"Failed to ban player: {str(e)}",
             color=discord.Color.red()
         )
         await interaction.followup.send(embed=embed)
 
 @tree.command(name="unbanasync", description="Unban a player by userid")
-async def unBanAsync_command(interaction: discord.Interaction, userid: str):
+@app_commands.describe(userid="The Roblox user ID to unban")
+async def unbanasync_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.", ephemeral=True)
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2226,31 +2236,34 @@ async def unBanAsync_command(interaction: discord.Interaction, userid: str):
 
         if response.status_code == 200:
             embed = ModerationEmbed(
-                title="Player Unbanned",
+                title="✅ Player Unbanned",
                 description=f"**Player:** {username}\n**UserID:** `{userid}`",
                 color=discord.Color.green()
             )
         else:
+            error_msg = response.text if response.text else f"Status: {response.status_code}"
             embed = ModerationEmbed(
-                title="Unban Failed",
-                description=f"Error: {response.status_code}",
+                title="❌ Unban Failed",
+                description=f"Error: {error_msg}",
                 color=discord.Color.red()
             )
 
         await interaction.followup.send(embed=embed)
 
-    except Exception as e:
+    except requests.exceptions.Timeout:
         embed = ModerationEmbed(
-            title="Error",
-            description=f"Failed: {str(e)}",
+            title="❌ Timeout Error",
+            description="Request timed out. Server may be unavailable.",
             color=discord.Color.red()
         )
         await interaction.followup.send(embed=embed)
-
-
-
-
-
+    except Exception as e:
+        embed = ModerationEmbed(
+            title="❌ Error",
+            description=f"Failed to unban player: {str(e)}",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
 
 @tree.command(name="checkwebhooks", description="Check webhooks status on Roblox server")
 async def checkwebhooks_command(interaction: discord.Interaction):
@@ -2261,7 +2274,6 @@ async def checkwebhooks_command(interaction: discord.Interaction):
     await interaction.response.defer()
 
     try:
-        # Проверяем статус вебхуков
         response = requests.get(f"{API_URL}/check_webhooks", timeout=10)
 
         if response.status_code == 200:
@@ -2269,11 +2281,10 @@ async def checkwebhooks_command(interaction: discord.Interaction):
 
             embed = ModerationEmbed(
                 title="🔍 Webhooks Status",
-                description="Current webhooks configuration",
                 color=discord.Color.blue()
             )
 
-            if 'webhooks' in data:
+            if 'webhooks' in data and data['webhooks'] is not None:
                 webhooks = data['webhooks']
                 webhook_count = len(webhooks)
 
@@ -2289,18 +2300,22 @@ async def checkwebhooks_command(interaction: discord.Interaction):
                     embed.description = f"Found **{webhook_count}** active webhook(s)"
                     embed.color = discord.Color.orange()
 
-                    # Показываем информацию о вебхуках
-                    for i, webhook in enumerate(webhooks[:5]):  # Максимум 5 вебхуков
+                    for i, webhook in enumerate(webhooks[:5]):
                         if isinstance(webhook, dict):
                             name = webhook.get('name', f'Webhook {i+1}')
                             url_preview = webhook.get('url', 'No URL')
-                            # Скрываем часть URL для безопасности
                             if len(url_preview) > 40:
                                 url_preview = url_preview[:20] + "..." + url_preview[-20:]
 
                             embed.add_field(
                                 name=f"🔗 {name}",
                                 value=f"URL: `{url_preview}`",
+                                inline=False
+                            )
+                        else:
+                            embed.add_field(
+                                name=f"🔗 Webhook {i+1}",
+                                value=f"Data: `{str(webhook)[:50]}`",
                                 inline=False
                             )
 
@@ -2313,25 +2328,33 @@ async def checkwebhooks_command(interaction: discord.Interaction):
 
                     embed.add_field(
                         name="⚠️ Recommendation",
-                        value=f"Use `/deleteserverallwebhook` to remove all {webhook_count} webhooks",
+                        value=f"Use `/deleteserverallwebhook` to remove all webhooks",
                         inline=False
                     )
             else:
+                embed.description = "Webhooks information not available or empty"
                 embed.add_field(
                     name="ℹ️ Information",
-                    value="Webhooks information not available",
+                    value="Could not retrieve webhooks data",
                     inline=False
                 )
 
         else:
             embed = ModerationEmbed(
                 title="❌ Cannot Check Webhooks",
-                description="Server does not support webhook checking",
+                description=f"Server returned status code: {response.status_code}",
                 color=discord.Color.red()
             )
 
         await interaction.followup.send(embed=embed)
 
+    except requests.exceptions.Timeout:
+        embed = ModerationEmbed(
+            title="❌ Timeout Error",
+            description="Request timed out. Server may be unavailable.",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
     except Exception as e:
         embed = ModerationEmbed(
             title="❌ Error",
@@ -2339,11 +2362,6 @@ async def checkwebhooks_command(interaction: discord.Interaction):
             color=discord.Color.red()
         )
         await interaction.followup.send(embed=embed)
-
-
-
-
-
 
 class DeleteWebhooksConfirmView(View):
     def __init__(self, interaction_user: discord.User, webhook_count: int = 0):
@@ -2353,8 +2371,8 @@ class DeleteWebhooksConfirmView(View):
 
     @discord.ui.button(label="Delete ALL Webhooks", style=discord.ButtonStyle.danger, emoji="🗑️")
     async def confirm(self, interaction: discord.Interaction, button: Button):
-        if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+        if interaction.user.id != self.interaction_user.id:
+            await interaction.response.send_message("❌ You are not authorized to use this button.", ephemeral=True)
             return
 
         button.disabled = True
@@ -2362,18 +2380,20 @@ class DeleteWebhooksConfirmView(View):
         await interaction.response.edit_message(view=self)
 
         try:
-            # Отправляем команду на удаление
             response = requests.post(
                 f"{API_URL}/deleteserverallwebhook",
                 json={
                     "command": "deleteserverallwebhook",
                     "executor": interaction.user.name
                 },
-                timeout=10
+                timeout=15
             )
 
             if response.status_code == 200:
-                data = response.json()
+                try:
+                    data = response.json()
+                except:
+                    data = {}
 
                 if data.get("success"):
                     deleted_count = data.get("deleted_count", self.webhook_count)
@@ -2397,22 +2417,31 @@ class DeleteWebhooksConfirmView(View):
                         inline=False
                     )
                 else:
+                    error_msg = data.get('error', 'Unknown error')
                     embed = ModerationEmbed(
                         title="❌ Failed",
-                        description=f"Error: {data.get('error', 'Unknown error')}",
+                        description=f"Error: {error_msg}",
                         color=discord.Color.red(),
                         moderator=interaction.user
                     )
             else:
                 embed = ModerationEmbed(
                     title="❌ Server Error",
-                    description=f"Status: {response.status_code}",
+                    description=f"Status: {response.status_code}\nResponse: {response.text[:100]}",
                     color=discord.Color.red(),
                     moderator=interaction.user
                 )
 
             await interaction.edit_original_response(embed=embed, view=None)
 
+        except requests.exceptions.Timeout:
+            embed = ModerationEmbed(
+                title="❌ Timeout Error",
+                description="Request timed out. Server may be unavailable or processing.",
+                color=discord.Color.red(),
+                moderator=interaction.user
+            )
+            await interaction.edit_original_response(embed=embed, view=None)
         except Exception as e:
             embed = ModerationEmbed(
                 title="❌ Error",
@@ -2424,11 +2453,17 @@ class DeleteWebhooksConfirmView(View):
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
-        if interaction.user != self.interaction_user:
-            await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+        if interaction.user.id != self.interaction_user.id:
+            await interaction.response.send_message("❌ You are not authorized to use this button.", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="❌ Operation cancelled.", embed=None, view=None)
+        embed = ModerationEmbed(
+            title="❌ Operation Cancelled",
+            description="Webhook deletion has been cancelled.",
+            color=discord.Color.greyple(),
+            moderator=interaction.user
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
 
 @tree.command(name="deleteserverallwebhook", description="Delete ALL webhooks from Roblox server (Admin)")
 async def deleteserverallwebhook_command(interaction: discord.Interaction):
@@ -2438,15 +2473,19 @@ async def deleteserverallwebhook_command(interaction: discord.Interaction):
 
     await interaction.response.defer()
 
-    # Сначала проверяем сколько вебхуков
     webhook_count = 0
     try:
         check_res = requests.get(f"{API_URL}/check_webhooks", timeout=5)
         if check_res.status_code == 200:
-            data = check_res.json()
-            if 'webhooks' in data:
-                webhook_count = len(data['webhooks'])
-    except:
+            try:
+                data = check_res.json()
+                if 'webhooks' in data and data['webhooks'] is not None:
+                    webhook_count = len(data['webhooks'])
+            except:
+                pass
+    except requests.exceptions.Timeout:
+        pass
+    except Exception:
         pass
 
     if webhook_count > 0:
@@ -2478,10 +2517,10 @@ async def deleteserverallwebhook_command(interaction: discord.Interaction):
             inline=False
         )
 
-        await interaction.followup.send(embed=embed, view=DeleteWebhooksConfirmView(interaction.user, webhook_count))
+        view = DeleteWebhooksConfirmView(interaction.user, webhook_count)
+        await interaction.followup.send(embed=embed, view=view)
 
     else:
-        # Если нет вебхуков или не можем проверить
         embed = ModerationEmbed(
             title="⚠️ DELETE ALL WEBHOOKS",
             description="**WARNING:** This will delete ALL webhooks from Roblox server!",
@@ -2497,11 +2536,27 @@ async def deleteserverallwebhook_command(interaction: discord.Interaction):
 
         embed.add_field(
             name="🔍 Status",
-            value="Could not check current webhooks. Proceed with caution.",
+            value="Could not determine current webhook count. Proceed with extreme caution.",
             inline=False
         )
 
-        await interaction.followup.send(embed=embed, view=DeleteWebhooksConfirmView(interaction.user))
+        view = DeleteWebhooksConfirmView(interaction.user)
+        await interaction.followup.send(embed=embed, view=view)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 @tree.command(name="help", description="Show commands")
 async def help_command(interaction: discord.Interaction):
@@ -2596,15 +2651,25 @@ async def cmds_command(interaction: discord.Interaction):
 `/check`, `/ping`, `/logs`, `/checkwebhooks`
 
 **Admin:**
-`/restart`, `/shutdown`, `/announce`, `/broadcast`, `/deleteserverallwebhook`"""
+`/restart`, `/shutdown`, `/announce`, `/broadcast`"""
 
     embed = ModerationEmbed(
         title="Quick Commands",
         description=commands_list,
         color=discord.Color.blue()
     )
-    embed.set_footer(text="Use /help for detailed information • Kynx System:✅")
+    embed.set_footer(text="Use /help for detailed information • Kynx System:✅Integrated")
     await interaction.response.send_message(embed=embed)
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return
+    elif isinstance(error, commands.MissingPermissions):
+        await ctx.send("❌ No permission.", ephemeral=True)
+    else:
+        logger.error(f"Error: {str(error)}")
+        await ctx.send("❌ Error.", ephemeral=True)
 
 def run():
     if TOKEN:
@@ -2617,3 +2682,6 @@ def run():
         bot.run(TOKEN)
     else:
         logger.error("No token found.")
+
+if __name__ == "__main__":
+    run()
