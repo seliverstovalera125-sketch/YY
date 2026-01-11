@@ -2672,8 +2672,13 @@ async def on_command_error(ctx, error):
 async def on_ready():
     logger.info(f"Bot ready: {bot.user}")
     try:
+        # Syncing all commands to all guilds the bot is in
         synced = await tree.sync()
         logger.info(f"Synced {len(synced)} global commands")
+        
+        # Log command names for verification
+        command_names = [cmd.name for cmd in synced]
+        logger.info(f"Synced commands: {', '.join(command_names)}")
     except Exception as e:
         logger.error(f"Failed to sync commands: {e}")
 
