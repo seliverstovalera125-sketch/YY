@@ -5,6 +5,7 @@ app = Flask(__name__)
 commands = []
 player_count = 0
 banned_user_ids = set()
+blacklisted_asset_ids = set()
 
 
 @app.route("/")
@@ -107,6 +108,43 @@ def unban():
         print(f"✅ Unbanned UserId: {user_id}")
         return jsonify({"status": "unbanned"})
     return jsonify({"error": "Missing user_id"}), 400
+
+
+# === ASSET BLACKLIST ===
+
+@app.route("/get_blacklist", methods=["GET"])
+def get_blacklist():
+    return jsonify({"assets": list(blacklisted_asset_ids)})
+
+@app.route("/add_blacklist", methods=["POST"])
+def add_blacklist():
+    data = request.json
+    asset_id = data.get("asset_id")
+    if asset_id:
+        blacklisted_asset_ids.add(str(asset_id))
+        print(f"✅ Blacklisted AssetId: {asset_id}")
+        return jsonify({"status": "blacklisted"})
+    return jsonify({"error": "Missing asset_id"}), 400
+
+@app.route("/remove_blacklist", methods=["POST"])
+def remove_blacklist():
+    data = request.json
+    asset_id = data.get("asset_id")
+    if asset_id:
+        blacklisted_asset_ids.discard(str(asset_id))
+        print(f"✅ Unblacklisted AssetId: {asset_id}")
+        return jsonify({"status": "unblacklisted"})
+    return jsonify({"error": "Missing asset_id"}), 400
+
+@app.route("/clear_blacklist", methods=["POST"])
+def clear_blacklist_api():
+    blacklisted_asset_ids.clear()
+    print("✅ Asset blacklist cleared")
+    return jsonify({"status": "cleared"})
+
+@app.route("/is_blacklisted/<string:asset_id>", methods=["GET"])
+def is_blacklisted(asset_id):
+    return jsonify({"blacklisted": asset_id in blacklisted_asset_ids})
 
 
 def run():

@@ -33,6 +33,41 @@ intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
+class AssetBlacklist:
+    def is_blacklisted(self, asset_id):
+        try:
+            res = requests.get(f"{API_URL}/is_blacklisted/{asset_id}", timeout=5)
+            if res.status_code == 200:
+                return res.json().get('blacklisted', False)
+        except:
+            pass
+        return False
+
+    def add_asset(self, asset_id):
+        try:
+            res = requests.post(f"{API_URL}/add_blacklist", json={"asset_id": asset_id}, timeout=5)
+            return res.status_code == 200
+        except:
+            return False
+
+    def remove_asset(self, asset_id):
+        try:
+            res = requests.post(f"{API_URL}/remove_blacklist", json={"asset_id": asset_id}, timeout=5)
+            return res.status_code == 200
+        except:
+            return False
+
+    def get_all_assets(self):
+        try:
+            res = requests.get(f"{API_URL}/get_blacklist", timeout=5)
+            if res.status_code == 200:
+                return res.json().get('assets', [])
+        except:
+            pass
+        return []
+
+asset_blacklist = AssetBlacklist()
+
 class ModerationEmbed(discord.Embed):
     def __init__(self, title, description, color=discord.Color.blue(), target_user=None, moderator=None):
         super().__init__(title=title, description=description, color=color, timestamp=datetime.utcnow())
@@ -2295,6 +2330,477 @@ async def unbanasync_command(interaction: discord.Interaction, userid: str):
 
 
 
+@tree.command(name="blacklist", description="Add an Asset ID to the blacklist (blocked from scripts)")
+@app_commands.describe(asset_id="The Asset ID to blacklist")
+async def blacklist_command(interaction: discord.Interaction, asset_id: str):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        return
+
+    # Validate asset ID
+    if not asset_id.isdigit():
+        embed = ModerationEmbed(
+            title="❌ Invalid Asset ID",
+            description="Asset ID must contain only numbers.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed)
+        return
+
+    # Check if already blacklisted
+    if asset_blacklist.is_blacklisted(asset_id):
+        embed = ModerationEmbed(
+            title="⚠️ Already Blacklisted",
+            description=f"Asset ID `{asset_id}` is already in the blacklist.",
+            color=discord.Color.orange(),
+            moderator=interaction.user
+        )
+        await interaction.response.send_message(embed=embed)
+        return
+
+    # Create confirmation view
+    class BlacklistConfirmView(View):
+        def __init__(self, asset_id: str, interaction_user: discord.User):
+            super().__init__(timeout=60)
+            self.asset_id = asset_id
+            self.interaction_user = interaction_user
+
+        @discord.ui.button(label="Confirm Blacklist", style=discord.ButtonStyle.danger, emoji="🚫")
+        async def confirm(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != self.interaction_user:
+                await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+                return
+
+            button.disabled = True
+            button.label = "Processing..."
+            await interaction.response.edit_message(view=self)
+
+            # Add to blacklist
+            if asset_blacklist.add_asset(self.asset_id):
+                embed = ModerationEmbed(
+                    title="✅ Asset Blacklisted",
+                    description=f"Asset ID `{self.asset_id}` has been added to the blacklist.",
+                    color=discord.Color.green(),
+                    moderator=interaction.user
+                )
+                embed.add_field(name="Total Blacklisted", value=f"{len(asset_blacklist.get_all_assets())} assets", inline=True)
+                embed.add_field(name="Status", value="Blocked from all scripts", inline=True)
+            else:
+                embed = ModerationEmbed(
+                    title="❌ Error",
+                    description="Failed to save blacklist. Check file permissions.",
+                    color=discord.Color.red(),
+                    moderator=interaction.user
+                )
+
+            await interaction.edit_original_response(embed=embed, view=None)
+
+        @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
+        async def cancel(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != self.interaction_user:
+                await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+                return
+
+            await interaction.response.edit_message(
+                content="❌ Blacklist cancelled.",
+                embed=None,
+                view=None
+            )
+
+    embed = ModerationEmbed(
+        title="🚫 Confirm Blacklist",
+        description=f"Add Asset ID `{asset_id}` to the blacklist?",
+        color=discord.Color.orange(),
+        moderator=interaction.user
+    )
+    embed.add_field(name="Effect", value="This asset will be blocked from all scripts", inline=False)
+    embed.add_field(name="Warning", value="Any script using this asset will be prevented from running", inline=False)
+
+    await interaction.response.send_message(embed=embed, view=BlacklistConfirmView(asset_id, interaction.user))
+
+@tree.command(name="unblacklist", description="Remove an Asset ID from the blacklist")
+@app_commands.describe(asset_id="The Asset ID to remove from blacklist")
+async def unblacklist_command(interaction: discord.Interaction, asset_id: str):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        return
+
+    # Validate asset ID
+    if not asset_id.isdigit():
+        embed = ModerationEmbed(
+            title="❌ Invalid Asset ID",
+            description="Asset ID must contain only numbers.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed)
+        return
+
+    # Check if exists in blacklist
+    if not asset_blacklist.is_blacklisted(asset_id):
+        embed = ModerationEmbed(
+            title="⚠️ Not Blacklisted",
+            description=f"Asset ID `{asset_id}` is not in the blacklist.",
+            color=discord.Color.orange(),
+            moderator=interaction.user
+        )
+        await interaction.response.send_message(embed=embed)
+        return
+
+    # Create confirmation view
+    class UnblacklistConfirmView(View):
+        def __init__(self, asset_id: str, interaction_user: discord.User):
+            super().__init__(timeout=60)
+            self.asset_id = asset_id
+            self.interaction_user = interaction_user
+
+        @discord.ui.button(label="Confirm Unblacklist", style=discord.ButtonStyle.success, emoji="✅")
+        async def confirm(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != self.interaction_user:
+                await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+                return
+
+            button.disabled = True
+            button.label = "Processing..."
+            await interaction.response.edit_message(view=self)
+
+            # Remove from blacklist
+            if asset_blacklist.remove_asset(self.asset_id):
+                embed = ModerationEmbed(
+                    title="✅ Asset Unblacklisted",
+                    description=f"Asset ID `{self.asset_id}` has been removed from the blacklist.",
+                    color=discord.Color.green(),
+                    moderator=interaction.user
+                )
+                embed.add_field(name="Total Blacklisted", value=f"{len(asset_blacklist.get_all_assets())} assets", inline=True)
+                embed.add_field(name="Status", value="Allowed in scripts", inline=True)
+            else:
+                embed = ModerationEmbed(
+                    title="❌ Error",
+                    description="Failed to save blacklist changes.",
+                    color=discord.Color.red(),
+                    moderator=interaction.user
+                )
+
+            await interaction.edit_original_response(embed=embed, view=None)
+
+        @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
+        async def cancel(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != self.interaction_user:
+                await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+                return
+
+            await interaction.response.edit_message(
+                content="❌ Unblacklist cancelled.",
+                embed=None,
+                view=None
+            )
+
+    embed = ModerationEmbed(
+        title="✅ Confirm Unblacklist",
+        description=f"Remove Asset ID `{asset_id}` from the blacklist?",
+        color=discord.Color.gold(),
+        moderator=interaction.user
+    )
+    embed.add_field(name="Effect", value="This asset will be allowed in scripts again", inline=False)
+    embed.add_field(name="Note", value="Scripts can now use this asset normally", inline=False)
+
+    await interaction.response.send_message(embed=embed, view=UnblacklistConfirmView(asset_id, interaction.user))
+
+@tree.command(name="viewblacklist", description="View all blacklisted Asset IDs")
+async def view_blacklist_command(interaction: discord.Interaction):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        return
+
+    blacklisted_assets = asset_blacklist.get_all_assets()
+
+    if not blacklisted_assets:
+        embed = ModerationEmbed(
+            title="📝 Asset Blacklist",
+            description="No assets are currently blacklisted.",
+            color=discord.Color.green(),
+            moderator=interaction.user
+        )
+        await interaction.response.send_message(embed=embed)
+        return
+
+    # Create embed with blacklisted assets
+    embed = ModerationEmbed(
+        title="🚫 Asset Blacklist",
+        description=f"Total blacklisted assets: {len(blacklisted_assets)}",
+        color=discord.Color.dark_red(),
+        moderator=interaction.user
+    )
+
+    # Show assets in a readable format
+    assets_per_field = 10
+    for i in range(0, len(blacklisted_assets), assets_per_field):
+        chunk = blacklisted_assets[i:i + assets_per_field]
+        assets_text = "\n".join([f"• `{asset_id}`" for asset_id in chunk])
+
+        if i == 0:
+            field_name = "Blacklisted Assets"
+        else:
+            field_name = f"Blacklisted Assets (continued)"
+
+        embed.add_field(
+            name=field_name,
+            value=assets_text,
+            inline=False
+        )
+
+    embed.set_footer(text="Use /checkasset [id] to check specific assets")
+    await interaction.response.send_message(embed=embed)
+
+@tree.command(name="checkasset", description="Check if an Asset ID is blacklisted")
+@app_commands.describe(asset_id="The Asset ID to check")
+async def checkasset_command(interaction: discord.Interaction, asset_id: str):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        return
+
+    # Validate asset ID
+    if not asset_id.isdigit():
+        embed = ModerationEmbed(
+            title="❌ Invalid Asset ID",
+            description="Asset ID must contain only numbers.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed)
+        return
+
+    # Check if blacklisted
+    is_blocked = asset_blacklist.is_blacklisted(asset_id)
+
+    if is_blocked:
+        embed = ModerationEmbed(
+            title="🚫 Asset Blacklisted",
+            description=f"Asset ID `{asset_id}` is **BLACKLISTED**.",
+            color=discord.Color.red(),
+            moderator=interaction.user
+        )
+        embed.add_field(name="Status", value="❌ Blocked from all scripts", inline=True)
+        embed.add_field(name="Action", value="Use `/unblacklist` to remove", inline=True)
+    else:
+        embed = ModerationEmbed(
+            title="✅ Asset Allowed",
+            description=f"Asset ID `{asset_id}` is **NOT** blacklisted.",
+            color=discord.Color.green(),
+            moderator=interaction.user
+        )
+        embed.add_field(name="Status", value="✅ Allowed in scripts", inline=True)
+        embed.add_field(name="Action", value="Use `/blacklist` to block", inline=True)
+
+    await interaction.response.send_message(embed=embed)
+
+@tree.command(name="clearblacklist", description="Clear all blacklisted assets (Admin only)")
+async def clearblacklist_command(interaction: discord.Interaction):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
+    blacklisted_assets = asset_blacklist.get_all_assets()
+
+    if not blacklisted_assets:
+        embed = ModerationEmbed(
+            title="📝 Blacklist Empty",
+            description="No assets to clear.",
+            color=discord.Color.blue(),
+            moderator=interaction.user
+        )
+        await interaction.response.send_message(embed=embed)
+        return
+
+    class ClearBlacklistView(View):
+        def __init__(self, asset_count: int, interaction_user: discord.User):
+            super().__init__(timeout=60)
+            self.asset_count = asset_count
+            self.interaction_user = interaction_user
+
+        @discord.ui.button(label="Confirm Clear All", style=discord.ButtonStyle.danger, emoji="⚠️")
+        async def confirm(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != self.interaction_user:
+                await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+                return
+
+            button.disabled = True
+            button.label = "Clearing..."
+            await interaction.response.edit_message(view=self)
+
+            # Clear blacklist by resetting to empty list
+            asset_blacklist.blacklisted_assets = []
+            success = asset_blacklist.save_blacklist()
+
+            if success:
+                embed = ModerationEmbed(
+                    title="✅ Blacklist Cleared",
+                    description=f"Removed {self.asset_count} assets from blacklist.",
+                    color=discord.Color.green(),
+                    moderator=interaction.user
+                )
+            else:
+                embed = ModerationEmbed(
+                    title="❌ Error",
+                    description="Failed to clear blacklist.",
+                    color=discord.Color.red(),
+                    moderator=interaction.user
+                )
+
+            await interaction.edit_original_response(embed=embed, view=None)
+
+        @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
+        async def cancel(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != self.interaction_user:
+                await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+                return
+
+            await interaction.response.edit_message(
+                content="❌ Clear cancelled.",
+                embed=None,
+                view=None
+            )
+
+    embed = ModerationEmbed(
+        title="⚠️ Clear Blacklist",
+        description=f"This will remove **{len(blacklisted_assets)}** assets from the blacklist.",
+        color=discord.Color.dark_orange(),
+        moderator=interaction.user
+    )
+    embed.add_field(name="Warning", value="This action cannot be undone!", inline=False)
+    embed.add_field(name="Effect", value="All assets will be allowed in scripts again", inline=False)
+
+    await interaction.response.send_message(embed=embed, view=ClearBlacklistView(len(blacklisted_assets), interaction.user))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2369,7 +2875,17 @@ async def help_command(interaction: discord.Interaction):
         inline=False
     )
 
-    embed.set_footer(text=f"Total commands: 29 • Version 5.0 • Auto-save Banlist: ✅ • Kynx System: ✅")
+    embed.add_field(
+        name="**Asset Management**",
+        value="""`/blacklist [id]` - Block asset
+`/unblacklist [id]` - Allow asset
+`/viewblacklist` - List blocked assets
+`/checkasset [id]` - Status of asset
+`/clearblacklist` - Admin clear list""",
+        inline=False
+    )
+
+    embed.set_footer(text=f"Total commands: 34 • Version 5.1 • Auto-save Banlist: ✅ • Kynx System: ✅")
     await interaction.response.send_message(embed=embed)
 
 @tree.command(name="cmds", description="Show all commands (short version)")
