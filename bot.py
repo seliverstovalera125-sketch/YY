@@ -118,8 +118,6 @@ class ConfirmActionView(View):
                     "executor": interaction.user.name,
                     "username": self.username
                 }
-            elif self.action == "mute":
-                data = {"command": self.action, "userid": self.userid, "reason": self.reason, "duration": self.duration, "executor": interaction.user.name}
             else:
                 data = {"command": self.action, "userid": self.userid, "reason": self.reason, "executor": interaction.user.name}
 
@@ -188,15 +186,6 @@ class ConfirmActionView(View):
                     title="⚠️ Player Warned",
                     description=f"**{self.username}** has been warned.",
                     color=discord.Color.orange(),
-                    target_user=f"{self.username} ({self.userid})",
-                    moderator=interaction.user
-                )
-                embed.add_field(name="Reason", value=self.reason, inline=False)
-            elif self.action == "mute":
-                embed = ModerationEmbed(
-                    title="✅ Player Muted",
-                    description=f"**{self.username}** has been muted.",
-                    color=discord.Color.green(),
                     target_user=f"{self.username} ({self.userid})",
                     moderator=interaction.user
                 )
@@ -871,7 +860,7 @@ async def on_ready():
     logger.info(f"Bot ready: {bot.user}")
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="for /help"))
 
-# ===== РОГАРД КОМАНДЫ LEVEL 1 =====
+# ===== COMMANDS =====
 
 @tree.command(name="kick", description="Kick a player from the Roblox server")
 @app_commands.describe(
@@ -917,96 +906,6 @@ async def kick_command(interaction: discord.Interaction, userid: str, reason: st
     embed.add_field(name="Reason", value=reason, inline=True)
 
     await interaction.followup.send(embed=embed, view=ConfirmActionView("kick", userid, reason, data['name'], interaction.user))
-
-@tree.command(name="mute", description="Mute a player from the Roblox server for a specified time")
-@app_commands.describe(
-    userid="Roblox UserID",
-    duration="Duration (ex: 1h, 30m, 2d)",
-    reason="Mute reason"
-)
-async def mute_command(interaction: discord.Interaction, userid: str, duration: str, reason: str):
-    if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.", ephemeral=True)
-        return
-
-    await interaction.response.defer()
-
-    if not userid.isdigit():
-        embed = ModerationEmbed(
-            title="Invalid ID",
-            description="UserID must be numbers only.",
-            color=discord.Color.red()
-        )
-        await interaction.followup.send(embed=embed)
-        return
-
-    data = await get_roblox_user_data(userid)
-    if not data:
-        embed = ModerationEmbed(
-            title="User not found",
-            description=f"ID `{userid}` not found on Roblox.",
-            color=discord.Color.red()
-        )
-        await interaction.followup.send(embed=embed)
-        return
-
-    embed = ModerationEmbed(
-        title="Confirm Mute",
-        description=f"Mute **{data['name']}** for {duration}?",
-        color=discord.Color.dark_grey(),
-        target_user=f"{data['name']} (@{data['display']})",
-        moderator=interaction.user
-    )
-    if data['avatar']: 
-        embed.set_thumbnail(url=data['avatar'])
-    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
-    embed.add_field(name="Duration", value=duration, inline=True)
-    embed.add_field(name="Reason", value=reason, inline=False)
-
-    await interaction.followup.send(embed=embed, view=ConfirmActionView("mute", userid, reason, data['name'], interaction.user, duration=duration))
-
-@tree.command(name="umute", description="Removes the mute of a player from the Roblox server")
-@app_commands.describe(
-    userid="Roblox UserID"
-)
-async def umute_command(interaction: discord.Interaction, userid: str):
-    if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.", ephemeral=True)
-        return
-
-    await interaction.response.defer()
-
-    if not userid.isdigit():
-        embed = ModerationEmbed(
-            title="Invalid ID",
-            description="UserID must be numbers only.",
-            color=discord.Color.red()
-        )
-        await interaction.followup.send(embed=embed)
-        return
-
-    data = await get_roblox_user_data(userid)
-    if not data:
-        embed = ModerationEmbed(
-            title="User not found",
-            description=f"ID `{userid}` not found on Roblox.",
-            color=discord.Color.red()
-        )
-        await interaction.followup.send(embed=embed)
-        return
-
-    embed = ModerationEmbed(
-        title="Confirm Unmute",
-        description=f"Unmute **{data['name']}**?",
-        color=discord.Color.green(),
-        target_user=f"{data['name']} (@{data['display']})",
-        moderator=interaction.user
-    )
-    if data['avatar']: 
-        embed.set_thumbnail(url=data['avatar'])
-    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
-
-    await interaction.followup.send(embed=embed, view=ConfirmActionView("unmute", userid, "Unmute requested", data['name'], interaction.user))
 
 @tree.command(name="userlogs", description="Displays a user's moderation logs")
 @app_commands.describe(
@@ -1155,7 +1054,7 @@ async def userinfo_command(interaction: discord.Interaction, userid: str):
         await interaction.followup.send(embed=embed)
         return
 
-    # Проверяем бан статус
+    # Check ban status
     is_banned = False
     ban_reason = ""
     ban_type = "normal"
@@ -1235,7 +1134,7 @@ async def gameinfo_command(interaction: discord.Interaction, placeid: str):
                 embed.add_field(name="Name", value=game.get('name', 'Unknown'), inline=True)
                 embed.add_field(name="Description", value=game.get('description', 'No description')[:100] + "...", inline=False)
 
-                # Попробуем получить количество игроков
+                # Try to get player count
                 try:
                     players_res = requests.get(f"{API_URL}/get_players", timeout=5)
                     if players_res.status_code == 200:
@@ -1267,7 +1166,7 @@ async def gameinfo_command(interaction: discord.Interaction, placeid: str):
         )
         await interaction.followup.send(embed=embed)
 
-# ===== РОГАРД КОМАНДЫ LEVEL 3 =====
+# ===== ADMIN COMMANDS =====
 
 @tree.command(name="announcement", description="Display an announcement on the Roblox server")
 @app_commands.describe(
@@ -1332,7 +1231,7 @@ async def cleanotes_command(interaction: discord.Interaction, userid: str):
 
     await interaction.followup.send(embed=embed, view=CleanNotesView(userid, data['name'], data['display'], interaction.user))
 
-# ===== СУЩЕСТВУЮЩИЕ КОМАНДЫ (остаются без изменений) =====
+# ===== BASIC COMMANDS =====
 
 @tree.command(name="ping", description="Check bot status")
 async def ping_command(interaction: discord.Interaction):
@@ -1409,10 +1308,6 @@ async def ban_command(interaction: discord.Interaction, userid: str, reason: str
 
     await interaction.followup.send(embed=embed, view=ConfirmActionView("ban", userid, reason, data['name'], interaction.user, duration, ban_type=ban_type))
 
-
-
-
-
 @tree.command(name="check", description="Check server status")
 async def check_command(interaction: discord.Interaction):
     try:
@@ -1454,13 +1349,6 @@ async def check_command(interaction: discord.Interaction):
             color=discord.Color.red()
         )
         await interaction.response.send_message(embed=embed)
-
-
-
-
-
-
-
 
 @tree.command(name="banlist", description="View bans (automatically saves to server files)")
 async def banlist_command(interaction: discord.Interaction):
@@ -2082,7 +1970,7 @@ async def logs_command(interaction: discord.Interaction, lines: int = 10):
         )
         await interaction.followup.send(embed=embed)
 
-@tree.command(name="pcban", description="PC BanAsync player (Device-based ban)")
+@tree.command(name="pcban", description="PC Ban player (Device-based ban)")
 @app_commands.describe(
     userid="Roblox UserID",
     reason="Ban reason"
@@ -2156,7 +2044,7 @@ async def pcban_command(interaction: discord.Interaction, userid: str, reason: s
 
     await interaction.followup.send(embed=embed, view=PCBanView(userid, reason, data['name'], data['display'], interaction.user))
 
-@tree.command(name="unpcban", description="Unban unBanAsync player (Remove PC ban)")
+@tree.command(name="unpcban", description="Remove PC ban")
 @app_commands.describe(
     userid="Roblox UserID to unban"
 )
@@ -2195,7 +2083,6 @@ async def unpcban_command(interaction: discord.Interaction, userid: str):
 
     await interaction.followup.send(embed=embed, view=UnPCBanView(userid, username, display_name, interaction.user))
 
-
 @tree.command(name="banasync", description="Ban a player by userid")
 @app_commands.describe(
     userid="The Roblox user ID to ban", 
@@ -2213,7 +2100,7 @@ async def banasync_command(interaction: discord.Interaction, userid: str, reason
         username = data['name'] if data else f"User {userid}"
         display_name = data['display'] if data else username
 
-        # Отправляем команду БЕЗ поля duration
+        # Send ban command WITHOUT duration field
         response = requests.post(
             f"{API_URL}/send_command",
             json={
@@ -2222,7 +2109,7 @@ async def banasync_command(interaction: discord.Interaction, userid: str, reason
                 "reason": reason,
                 "executor": interaction.user.name,
                 "username": username,
-                "banType": "normal"  # Или "pc" если нужно
+                "banType": "normal"  # Or "pc" if needed
             },
             timeout=10
         )
@@ -2262,8 +2149,6 @@ async def banasync_command(interaction: discord.Interaction, userid: str, reason
         )
         await interaction.followup.send(embed=embed)
 
-
-
 @tree.command(name="unbanasync", description="Unban a player by userid")
 @app_commands.describe(userid="The Roblox user ID to unban")
 async def unbanasync_command(interaction: discord.Interaction, userid: str):
@@ -2277,7 +2162,7 @@ async def unbanasync_command(interaction: discord.Interaction, userid: str):
         data = await get_roblox_user_data(userid)
         username = data['name'] if data else f"User {userid}"
 
-        # Отправляем команду unban
+        # Send unban command
         response = requests.post(
             f"{API_URL}/send_command",
             json={
@@ -2321,14 +2206,7 @@ async def unbanasync_command(interaction: discord.Interaction, userid: str):
         )
         await interaction.followup.send(embed=embed)
 
-
-
-
-
-
-
-
-
+# ===== ASSET BLACKLIST COMMANDS =====
 
 @tree.command(name="blacklist", description="Add an Asset ID to the blacklist (blocked from scripts)")
 @app_commands.describe(asset_id="The Asset ID to blacklist")
@@ -2677,141 +2555,6 @@ async def clearblacklist_command(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed, view=ClearBlacklistView(len(blacklisted_assets), interaction.user))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @tree.command(name="help", description="Show commands")
 async def help_command(interaction: discord.Interaction):
     embed = ModerationEmbed(
@@ -2821,10 +2564,8 @@ async def help_command(interaction: discord.Interaction):
     )
 
     embed.add_field(
-        name="**Kynx Level 1 Commands**",
+        name="**Player Management**",
         value="""`/kick [id] [reason]` - Kick player
-`/mute [id] [duration] [reason]` - Mute player
-`/umute [id]` - Remove mute
 `/userlogs [id]` - View user logs
 `/addnote [id] [note]` - Add note to player
 `/userinfo [id]` - Get user info
@@ -2833,41 +2574,36 @@ async def help_command(interaction: discord.Interaction):
     )
 
     embed.add_field(
-        name="**Kynx Level 3 Commands**",
-        value="""`/announcement [message]` - Send announcement
-`/cleanotes [id]` - Remove all notes""",
-        inline=False
-    )
-
-    embed.add_field(
-        name="**Moderation Commands**",
+        name="**Ban Commands**",
         value="""`/ban [id] [reason] [duration] [type]` - Ban player
 `/unban [id] [type]` - Unban player
-`/warn [id] [reason]` - Warn player
-`/pcban [id] [reason]` - PC BanAsync player
+`/pcban [id] [reason]` - PC Ban player
 `/unpcban [id]` - Remove PC ban
-`/BanAsync [id] [reason]` - Async ban
-`/unBanAsync [id]` - Async unban""",
+`/banasync [id] [reason]` - Async ban
+`/unbanasync [id]` - Async unban
+`/banlist` - View all bans (auto-saves)""",
         inline=False
     )
 
     embed.add_field(
-        name="**Player & List Commands**",
-        value="""`/banlist` - View all bans (auto-saves to files)
+        name="**Server Commands**",
+        value="""`/warn [id] [reason]` - Warn player
+`/cleanotes [id]` - Remove all notes (Admin)
 `/players` - Online players list
 `/find [name]` - Find player
 `/lookup [id]` - Player history
 `/stats` - Server statistics
-`/checking` - Detailed server status""",
+`/check` - Player count""",
         inline=False
     )
 
     embed.add_field(
-        name="**Server Info Commands**",
-        value="""`/check` - Player count
-`/ping` - Bot status
-`/logs [lines]` - View logs
-`/checkwebhooks` - Check webhooks status""",
+        name="**Asset Management**",
+        value="""`/blacklist [id]` - Block asset from scripts
+`/unblacklist [id]` - Allow asset in scripts
+`/viewblacklist` - List blocked assets
+`/checkasset [id]` - Status of asset
+`/clearblacklist` - Clear all (Admin)""",
         inline=False
     )
 
@@ -2877,52 +2613,49 @@ async def help_command(interaction: discord.Interaction):
 `/shutdown` - Stop server
 `/announce [msg]` - Announcement
 `/broadcast [msg]` - Broadcast
-`/deleteserverallwebhook` - Delete ALL webhooks""",
+`/announcement [msg]` - Send announcement
+`/logs [lines]` - View server logs""",
         inline=False
     )
 
     embed.add_field(
-        name="**Asset Management**",
-        value="""`/blacklist [id]` - Block asset
-`/unblacklist [id]` - Allow asset
-`/viewblacklist` - List blocked assets
-`/checkasset [id]` - Status of asset
-`/clearblacklist` - Admin clear list""",
+        name="**Utility**",
+        value="""`/ping` - Bot status
+`/check` - Server status""",
         inline=False
     )
 
-    embed.set_footer(text=f"Total commands: 34 • Version 5.1 • Auto-save Banlist: ✅ • Kynx System: ✅")
+    embed.set_footer(text=f"Total commands: 32 • Version 6.0 • Auto-save Banlist: ✅ • Asset Blacklist: ✅")
     await interaction.response.send_message(embed=embed)
 
 @tree.command(name="cmds", description="Show all commands (short version)")
 async def cmds_command(interaction: discord.Interaction):
     commands_list = """**Quick Commands List:**
 
-**Kynx Level 1:**
-`/kick`, `/mute`, `/umute`, `/userlogs`, `/addnote`, `/userinfo`, `/gameinfo`
+**Player Management:**
+`/kick`, `/userlogs`, `/addnote`, `/userinfo`, `/gameinfo`
 
-**Kynx Level 3:**
-`/announcement`, `/cleanotes`
+**Ban Commands:**
+`/ban`, `/unban`, `/pcban`, `/unpcban`, `/banasync`, `/unbanasync`, `/banlist`
 
-**Moderation:**
-`/ban`, `/unban`, `/warn`, `/pcban`, `/unpcban`, `/BanAsync`, `/unBanAsync`
+**Server Commands:**
+`/warn`, `/cleanotes`, `/players`, `/find`, `/lookup`, `/stats`, `/check`
 
-**Players & Lists:**
-`/banlist` - Auto-saves to server
-`/players`, `/find`, `/lookup`, `/stats`, `/checking`
-
-**Server:**
-`/check`, `/ping`, `/logs`, `/checkwebhooks`
+**Asset Management:**
+`/blacklist`, `/unblacklist`, `/viewblacklist`, `/checkasset`, `/clearblacklist`
 
 **Admin:**
-`/restart`, `/shutdown`, `/announce`, `/broadcast`"""
+`/restart`, `/shutdown`, `/announce`, `/broadcast`, `/announcement`, `/logs`
+
+**Utility:**
+`/ping`, `/check`"""
 
     embed = ModerationEmbed(
         title="Quick Commands",
         description=commands_list,
         color=discord.Color.blue()
     )
-    embed.set_footer(text="Use /help for detailed information • Kynx System:✅Integrated")
+    embed.set_footer(text="Use /help for detailed information • Total: 32 commands")
     await interaction.response.send_message(embed=embed)
 
 @bot.event
@@ -2935,14 +2668,23 @@ async def on_command_error(ctx, error):
         logger.error(f"Error: {str(error)}")
         await ctx.send("❌ Error.", ephemeral=True)
 
+@bot.event
+async def on_ready():
+    logger.info(f"Bot ready: {bot.user}")
+    try:
+        synced = await tree.sync()
+        logger.info(f"Synced {len(synced)} global commands")
+    except Exception as e:
+        logger.error(f"Failed to sync commands: {e}")
+
 def run():
     if TOKEN:
         logger.info("Starting Kynx bot...")
-        logger.info(f"Total commands loaded: 29")
-        logger.info("Kynx System: ✅ Integrated")
+        logger.info(f"Total commands loaded: 32")
+        logger.info("Mute/Umute commands: ❌ Removed")
         logger.info("PC Ban system: ✅ Enabled")
-        logger.info("Webhook Tools: ✅ Enabled")
         logger.info(f"Banlist Auto-save: ✅ ALWAYS enabled (saves to {BANLIST_DIR}/)")
+        logger.info("Asset Blacklist: ✅ Integrated with API")
         bot.run(TOKEN)
     else:
         logger.error("No token found.")
