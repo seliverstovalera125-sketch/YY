@@ -2627,21 +2627,27 @@ async def clearblacklist_command(interaction: discord.Interaction):
             button.label = "Clearing..."
             await interaction.response.edit_message(view=self)
 
-            # Clear blacklist by resetting to empty list
-            asset_blacklist.blacklisted_assets = []
-            success = asset_blacklist.save_blacklist()
-
-            if success:
-                embed = ModerationEmbed(
-                    title="✅ Blacklist Cleared",
-                    description=f"Removed {self.asset_count} assets from blacklist.",
-                    color=discord.Color.green(),
-                    moderator=interaction.user
-                )
-            else:
+            try:
+                # Clear blacklist via API
+                response = requests.post(f"{API_URL}/clear_blacklist", timeout=10)
+                if response.status_code == 200:
+                    embed = ModerationEmbed(
+                        title="✅ Blacklist Cleared",
+                        description=f"Removed {self.asset_count} assets from blacklist.",
+                        color=discord.Color.green(),
+                        moderator=interaction.user
+                    )
+                else:
+                    embed = ModerationEmbed(
+                        title="❌ Error",
+                        description="Failed to clear blacklist via API.",
+                        color=discord.Color.red(),
+                        moderator=interaction.user
+                    )
+            except Exception as e:
                 embed = ModerationEmbed(
                     title="❌ Error",
-                    description="Failed to clear blacklist.",
+                    description=f"Error: {str(e)}",
                     color=discord.Color.red(),
                     moderator=interaction.user
                 )
