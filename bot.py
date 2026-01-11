@@ -2555,6 +2555,74 @@ async def clearblacklist_command(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed, view=ClearBlacklistView(len(blacklisted_assets), interaction.user))
 
+@tree.command(name="mute", description="Mute a player")
+@app_commands.describe(
+    userid="Roblox UserID",
+    duration="Duration in minutes (e.g. 10, 60, 1440)",
+    reason="Reason for the mute"
+)
+async def mute_command(interaction: discord.Interaction, userid: str, duration: int, reason: str):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    if not userid.isdigit():
+        embed = ModerationEmbed(
+            title="Invalid ID",
+            description="UserID must be numbers only.",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
+        return
+
+    data = await get_roblox_user_data(userid)
+    username = data['name'] if data else f"User {userid}"
+
+    embed = ModerationEmbed(
+        title="Confirm Mute",
+        description=f"Mute **{username}**?",
+        color=discord.Color.orange(),
+        target_user=f"{username} ({userid})",
+        moderator=interaction.user
+    )
+    embed.add_field(name="Duration", value=f"{duration} minutes", inline=True)
+    embed.add_field(name="Reason", value=reason, inline=True)
+
+    await interaction.followup.send(embed=embed, view=ConfirmActionView("mute", userid, reason, username, interaction.user, duration=duration))
+
+@tree.command(name="umute", description="Unmute a player")
+@app_commands.describe(userid="Roblox UserID")
+async def umute_command(interaction: discord.Interaction, userid: str):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    if not userid.isdigit():
+        embed = ModerationEmbed(
+            title="Invalid ID",
+            description="UserID must be numbers only.",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
+        return
+
+    data = await get_roblox_user_data(userid)
+    username = data['name'] if data else f"User {userid}"
+
+    embed = ModerationEmbed(
+        title="Confirm Unmute",
+        description=f"Unmute **{username}**?",
+        color=discord.Color.green(),
+        target_user=f"{username} ({userid})",
+        moderator=interaction.user
+    )
+
+    await interaction.followup.send(embed=embed, view=ConfirmActionView("umute", userid, "Unmuted via Discord", username, interaction.user))
+
 @tree.command(name="help", description="Show commands")
 async def help_command(interaction: discord.Interaction):
     embed = ModerationEmbed(
@@ -2685,8 +2753,8 @@ async def on_ready():
 def run():
     if TOKEN:
         logger.info("Starting Kynx bot...")
-        logger.info(f"Total commands loaded: 32")
-        logger.info("Mute/Umute commands: ❌ Removed")
+        logger.info(f"Total commands loaded: 34")
+        logger.info("Mute/Umute commands: ✅ Fixed & Restored")
         logger.info("PC Ban system: ✅ Enabled")
         logger.info(f"Banlist Auto-save: ✅ ALWAYS enabled (saves to {BANLIST_DIR}/)")
         logger.info("Asset Blacklist: ✅ Integrated with API")
