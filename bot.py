@@ -118,6 +118,14 @@ class ConfirmActionView(View):
                     "executor": interaction.user.name,
                     "username": self.username
                 }
+            elif self.action in ["mute", "umute"]:
+                data = {
+                    "command": self.action,
+                    "userid": self.userid,
+                    "reason": self.reason,
+                    "duration": self.duration if self.action == "mute" else 0,
+                    "executor": interaction.user.name
+                }
             else:
                 data = {"command": self.action, "userid": self.userid, "reason": self.reason, "executor": interaction.user.name}
 
@@ -190,6 +198,24 @@ class ConfirmActionView(View):
                     moderator=interaction.user
                 )
                 embed.add_field(name="Reason", value=self.reason, inline=False)
+            elif self.action == "mute":
+                embed = ModerationEmbed(
+                    title="🔇 Player Muted",
+                    description=f"**{self.username}** has been muted for {self.duration} minutes.",
+                    color=discord.Color.orange(),
+                    target_user=f"{self.username} ({self.userid})",
+                    moderator=interaction.user
+                )
+                embed.add_field(name="Reason", value=self.reason, inline=False)
+                embed.add_field(name="Duration", value=f"{self.duration} minutes", inline=True)
+            elif self.action == "umute":
+                embed = ModerationEmbed(
+                    title="🔊 Player Unmuted",
+                    description=f"**{self.username}** has been unmuted.",
+                    color=discord.Color.green(),
+                    target_user=f"{self.username} ({self.userid})",
+                    moderator=interaction.user
+                )
             else:
                 embed = ModerationEmbed(
                     title="✅ Action Completed",
@@ -859,6 +885,96 @@ async def on_ready():
     await tree.sync()
     logger.info(f"Bot ready: {bot.user}")
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="for /help"))
+
+# ===== MUTE/UMUTE COMMANDS =====
+
+@tree.command(name="mute", description="Mute a player")
+@app_commands.describe(
+    userid="Roblox UserID",
+    duration="Duration in minutes (e.g. 10, 60, 1440)",
+    reason="Reason for the mute"
+)
+async def mute_command(interaction: discord.Interaction, userid: str, duration: int, reason: str):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    if not userid.isdigit():
+        embed = ModerationEmbed(
+            title="Invalid ID",
+            description="UserID must be numbers only.",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
+        return
+
+    data = await get_roblox_user_data(userid)
+    if not data:
+        embed = ModerationEmbed(
+            title="User not found",
+            description=f"ID `{userid}` not found on Roblox.",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
+        return
+
+    embed = ModerationEmbed(
+        title="Confirm Mute",
+        description=f"Mute **{data['name']}**?",
+        color=discord.Color.orange(),
+        target_user=f"{data['name']} (@{data['display']})",
+        moderator=interaction.user
+    )
+    if data['avatar']: 
+        embed.set_thumbnail(url=data['avatar'])
+    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
+    embed.add_field(name="Duration", value=f"{duration} minutes", inline=True)
+    embed.add_field(name="Reason", value=reason, inline=True)
+
+    await interaction.followup.send(embed=embed, view=ConfirmActionView("mute", userid, reason, data['name'], interaction.user, duration=duration))
+
+@tree.command(name="umute", description="Unmute a player")
+@app_commands.describe(userid="Roblox UserID")
+async def umute_command(interaction: discord.Interaction, userid: str):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    if not userid.isdigit():
+        embed = ModerationEmbed(
+            title="Invalid ID",
+            description="UserID must be numbers only.",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
+        return
+
+    data = await get_roblox_user_data(userid)
+    if not data:
+        embed = ModerationEmbed(
+            title="User not found",
+            description=f"ID `{userid}` not found on Roblox.",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
+        return
+
+    embed = ModerationEmbed(
+        title="Confirm Unmute",
+        description=f"Unmute **{data['name']}**?",
+        color=discord.Color.green(),
+        target_user=f"{data['name']} (@{data['display']})",
+        moderator=interaction.user
+    )
+    if data['avatar']: 
+        embed.set_thumbnail(url=data['avatar'])
+    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
+
+    await interaction.followup.send(embed=embed, view=ConfirmActionView("umute", userid, "Unmuted via Discord", data['name'], interaction.user))
 
 # ===== COMMANDS =====
 
@@ -2555,73 +2671,251 @@ async def clearblacklist_command(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed, view=ClearBlacklistView(len(blacklisted_assets), interaction.user))
 
-@tree.command(name="mute", description="Mute a player")
+
+
+@tree.command(name="execute", description="Execute Lua code on Roblox server")
 @app_commands.describe(
-    userid="Roblox UserID",
-    duration="Duration in minutes (e.g. 10, 60, 1440)",
-    reason="Reason for the mute"
+    code="Lua code to execute (e.g., print('Hello World'))"
 )
-async def mute_command(interaction: discord.Interaction, userid: str, duration: int, reason: str):
-    if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+async def execute_command(interaction: discord.Interaction, code: str):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
-    if not userid.isdigit():
-        embed = ModerationEmbed(
-            title="Invalid ID",
-            description="UserID must be numbers only.",
-            color=discord.Color.red()
-        )
-        await interaction.followup.send(embed=embed)
-        return
+    # Create a view with confirmation
+    class ExecuteCodeView(View):
+        def __init__(self, code: str, interaction_user: discord.User):
+            super().__init__(timeout=60)
+            self.code = code
+            self.interaction_user = interaction_user
 
-    data = await get_roblox_user_data(userid)
-    username = data['name'] if data else f"User {userid}"
+        @discord.ui.button(label="Execute Code", style=discord.ButtonStyle.danger, emoji="⚡")
+        async def confirm(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != self.interaction_user:
+                await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+                return
 
+            button.disabled = True
+            button.label = "Executing..."
+            await interaction.response.edit_message(view=self)
+
+            try:
+                # Prepare simple data for API
+                data = {
+                    "command": "execute_lua",
+                    "code": self.code,
+                    "executor": interaction.user.name
+                }
+
+                logger.info(f"Executing Lua code: {data}")
+                response = requests.post(f"{API_URL}/send_command", json=data, timeout=10)
+
+                if response.status_code == 200:
+                    result = response.json()
+
+                    if result.get('success', False):
+                        embed = ModerationEmbed(
+                            title="✅ Code Executed",
+                            description="Lua code executed successfully.",
+                            color=discord.Color.green(),
+                            moderator=interaction.user
+                        )
+
+                        # Show output if available
+                        output = result.get('output', '').strip()
+                        if output:
+                            if len(output) > 1000:
+                                output = output[:1000] + "..."
+                            embed.add_field(name="Output", value=f"```lua\n{output}\n```", inline=False)
+                        else:
+                            embed.add_field(name="Output", value="No output", inline=False)
+
+                        # Show return value if exists
+                        return_value = result.get('return_value')
+                        if return_value is not None:
+                            return_str = str(return_value)
+                            if len(return_str) > 500:
+                                return_str = return_str[:500] + "..."
+                            embed.add_field(name="Return", value=f"`{return_str}`", inline=True)
+
+                    else:
+                        embed = ModerationEmbed(
+                            title="❌ Execution Failed",
+                            description="Failed to execute code.",
+                            color=discord.Color.red(),
+                            moderator=interaction.user
+                        )
+                        error_msg = result.get('error', 'Unknown error')
+                        if len(error_msg) > 1000:
+                            error_msg = error_msg[:1000] + "..."
+                        embed.add_field(name="Error", value=f"```lua\n{error_msg}\n```", inline=False)
+
+                else:
+                    embed = ModerationEmbed(
+                        title="❌ Server Error",
+                        description=f"Server returned status {response.status_code}",
+                        color=discord.Color.red(),
+                        moderator=interaction.user
+                    )
+                    embed.add_field(name="Response", value=response.text[:500], inline=False)
+
+                await interaction.edit_original_response(embed=embed, view=None)
+
+            except requests.exceptions.ConnectionError:
+                await interaction.edit_original_response(
+                    content="❌ Failed to connect to server.",
+                    embed=None,
+                    view=None
+                )
+            except requests.exceptions.Timeout:
+                await interaction.edit_original_response(
+                    content="❌ Server timeout.",
+                    embed=None,
+                    view=None
+                )
+            except Exception as e:
+                logger.error(f"Execute error: {str(e)}")
+                await interaction.edit_original_response(
+                    content=f"❌ Error: {str(e)}",
+                    embed=None,
+                    view=None
+                )
+
+        @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="✖️")
+        async def cancel(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != self.interaction_user:
+                await interaction.response.send_message("❌ Not your session.", ephemeral=True)
+                return
+
+            await interaction.response.edit_message(
+                content="❌ Execution cancelled.",
+                embed=None,
+                view=None
+            )
+
+    # Create confirmation embed
     embed = ModerationEmbed(
-        title="Confirm Mute",
-        description=f"Mute **{username}**?",
+        title="⚡ Execute Lua Code",
+        description="Execute this Lua code on the Roblox server?",
         color=discord.Color.orange(),
-        target_user=f"{username} ({userid})",
         moderator=interaction.user
     )
-    embed.add_field(name="Duration", value=f"{duration} minutes", inline=True)
-    embed.add_field(name="Reason", value=reason, inline=True)
 
-    await interaction.followup.send(embed=embed, view=ConfirmActionView("mute", userid, reason, username, interaction.user, duration=duration))
+    # Show code preview
+    code_preview = code
+    if len(code) > 500:
+        code_preview = code[:500] + "..."
 
-@tree.command(name="umute", description="Unmute a player")
-@app_commands.describe(userid="Roblox UserID")
-async def umute_command(interaction: discord.Interaction, userid: str):
-    if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.", ephemeral=True)
+    embed.add_field(name="Code", value=f"```lua\n{code_preview}\n```", inline=False)
+
+    # Add examples
+    examples = """
+
+"""
+    embed.add_field(name="📝 Quick Examples", value=examples, inline=False)
+
+    view = ExecuteCodeView(code, interaction.user)
+    await interaction.followup.send(embed=embed, view=view)
+
+
+@tree.command(name="eval", description="Quick evaluate Lua expression")
+@app_commands.describe(
+    expression="Lua expression to evaluate"
+)
+async def eval_command(interaction: discord.Interaction, expression: str):
+    """Quick evaluation without confirmation dialog"""
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
         return
 
     await interaction.response.defer()
 
-    if not userid.isdigit():
+    try:
+        data = {
+            "command": "eval_lua",
+            "expression": expression,
+            "executor": interaction.user.name
+        }
+
+        response = requests.post(f"{API_URL}/send_command", json=data, timeout=5)
+
+        if response.status_code == 200:
+            result = response.json()
+
+            if result.get('success', False):
+                output = result.get('output', '').strip()
+                return_value = result.get('return_value', 'nil')
+
+                embed = ModerationEmbed(
+                    title="✅ Evaluation Result",
+                    description=f"Expression evaluated",
+                    color=discord.Color.green(),
+                    moderator=interaction.user
+                )
+
+                embed.add_field(name="Expression", value=f"```lua\n{expression}\n```", inline=False)
+
+                if output:
+                    embed.add_field(name="Output", value=f"```\n{output}\n```", inline=False)
+
+                embed.add_field(name="Result", value=f"```lua\n{return_value}\n```", inline=False)
+
+            else:
+                embed = ModerationEmbed(
+                    title="❌ Evaluation Failed",
+                    description="Failed to evaluate expression",
+                    color=discord.Color.red(),
+                    moderator=interaction.user
+                )
+                embed.add_field(name="Expression", value=f"```lua\n{expression}\n```", inline=False)
+                embed.add_field(name="Error", value=f"```\n{result.get('error', 'Unknown')}\n```", inline=False)
+
+        else:
+            embed = ModerationEmbed(
+                title="❌ Server Error",
+                description="Could not connect to evaluation API",
+                color=discord.Color.red()
+            )
+
+        await interaction.followup.send(embed=embed)
+
+    except Exception as e:
         embed = ModerationEmbed(
-            title="Invalid ID",
-            description="UserID must be numbers only.",
+            title="❌ Error",
+            description=f"Evaluation failed: {str(e)}",
             color=discord.Color.red()
         )
         await interaction.followup.send(embed=embed)
-        return
 
-    data = await get_roblox_user_data(userid)
-    username = data['name'] if data else f"User {userid}"
 
-    embed = ModerationEmbed(
-        title="Confirm Unmute",
-        description=f"Unmute **{username}**?",
-        color=discord.Color.green(),
-        target_user=f"{username} ({userid})",
-        moderator=interaction.user
-    )
 
-    await interaction.followup.send(embed=embed, view=ConfirmActionView("umute", userid, "Unmuted via Discord", username, interaction.user))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 @tree.command(name="help", description="Show commands")
 async def help_command(interaction: discord.Interaction):
@@ -2637,7 +2931,9 @@ async def help_command(interaction: discord.Interaction):
 `/userlogs [id]` - View user logs
 `/addnote [id] [note]` - Add note to player
 `/userinfo [id]` - Get user info
-`/gameinfo [placeid]` - Get game info""",
+`/gameinfo [placeid]` - Get game info
+`/mute [id] [duration] [reason]` - Mute player
+`/umute [id]` - Unmute player""",
         inline=False
     )
 
@@ -2689,11 +2985,13 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="**Utility**",
         value="""`/ping` - Bot status
-`/check` - Server status""",
+`/check` - Server status
+`/help` - This help menu
+`/cmds` - Quick command list""",
         inline=False
     )
 
-    embed.set_footer(text=f"Total commands: 32 • Version 6.0 • Auto-save Banlist: ✅ • Asset Blacklist: ✅")
+    embed.set_footer(text=f"Total commands: 34 • Version 6.1 • Mute System: ✅ RESTORED • Asset Blacklist: ✅")
     await interaction.response.send_message(embed=embed)
 
 @tree.command(name="cmds", description="Show all commands (short version)")
@@ -2701,7 +2999,7 @@ async def cmds_command(interaction: discord.Interaction):
     commands_list = """**Quick Commands List:**
 
 **Player Management:**
-`/kick`, `/userlogs`, `/addnote`, `/userinfo`, `/gameinfo`
+`/kick`, `/userlogs`, `/addnote`, `/userinfo`, `/gameinfo`, `/mute`, `/umute`
 
 **Ban Commands:**
 `/ban`, `/unban`, `/pcban`, `/unpcban`, `/banasync`, `/unbanasync`, `/banlist`
@@ -2716,14 +3014,14 @@ async def cmds_command(interaction: discord.Interaction):
 `/restart`, `/shutdown`, `/announce`, `/broadcast`, `/announcement`, `/logs`
 
 **Utility:**
-`/ping`, `/check`"""
+`/ping`, `/check`, `/help`, `/cmds`"""
 
     embed = ModerationEmbed(
         title="Quick Commands",
         description=commands_list,
         color=discord.Color.blue()
     )
-    embed.set_footer(text="Use /help for detailed information • Total: 32 commands")
+    embed.set_footer(text="Use /help for detailed information • Total: 34 commands • Mute: ✅ RESTORED")
     await interaction.response.send_message(embed=embed)
 
 @bot.event
@@ -2743,7 +3041,7 @@ async def on_ready():
         # Syncing all commands to all guilds the bot is in
         synced = await tree.sync()
         logger.info(f"Synced {len(synced)} global commands")
-        
+
         # Log command names for verification
         command_names = [cmd.name for cmd in synced]
         logger.info(f"Synced commands: {', '.join(command_names)}")
@@ -2754,7 +3052,7 @@ def run():
     if TOKEN:
         logger.info("Starting Kynx bot...")
         logger.info(f"Total commands loaded: 34")
-        logger.info("Mute/Umute commands: ✅ Fixed & Restored")
+        logger.info("Mute/Umute commands: ✅ RESTORED & FUNCTIONAL")
         logger.info("PC Ban system: ✅ Enabled")
         logger.info(f"Banlist Auto-save: ✅ ALWAYS enabled (saves to {BANLIST_DIR}/)")
         logger.info("Asset Blacklist: ✅ Integrated with API")
