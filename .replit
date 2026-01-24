@@ -37,5 +37,4 @@ externalPort = 80
 [deployment]
 deploymentTarget = "autoscale"
 build = ["pip install -r requirements.txt"]
-publicDir = "1"
 run = ["python", "main.py"]
