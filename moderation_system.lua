@@ -159,24 +159,6 @@ function UnmutePlayer(userId)
 	return true
 end
 
--- Ban Check logic
-local function checkBan(player)
-	local userId = tostring(player.UserId)
-	local banData = safeDataStoreOperation(BanStore, "get", userId)
-	if banData then
-		player:Kick("You are banned from this game. Reason: " .. (banData.reason or "No reason provided"))
-		return true
-	end
-	
-	local pcBanData = safeDataStoreOperation(PCBanStore, "get", userId)
-	if pcBanData then
-		player:Kick("Your device is banned from this game. Reason: " .. (pcBanData.reason or "No reason provided"))
-		return true
-	end
-	
-	return false
-end
-
 function saveToAllBansList(userId, banData)
 	userId = tonumber(userId) or 0
 	if userId == 0 then return end
@@ -208,13 +190,43 @@ function removeFromAllBansList(userId)
 	safeDataStoreOperation(AllBansStore, "set", "all_bans_list", newList)
 end
 
--- Polling Loop
+local function checkBan(player)
+	local userId = tostring(player.UserId)
+	local banData = safeDataStoreOperation(BanStore, "get", userId)
+	if banData then
+		player:Kick("You are banned from this game. Reason: " .. (banData.reason or "No reason provided"))
+		return true
+	end
+	local pcBanData = safeDataStoreOperation(PCBanStore, "get", userId)
+	if pcBanData then
+		player:Kick("Your device is banned from this game. Reason: " .. (pcBanData.reason or "No reason provided"))
+		return true
+	end
+	return false
+end
+
+local function setupAutomaticBan()
+	Players.PlayerAdded:Connect(function(Player)
+		Player.Chatted:Connect(function(Message)
+			if string.find(string.lower(Message), 'bad game') or string.find(string.lower(Message), '?????? ????') then
+				safeLog("Auto-ban triggered for: " .. Player.Name .. " - Message: " .. Message)
+				if isOfficialBanAPIAvailable() then
+					OfficialBanAsync(Player.UserId, 600, 'Inappropriate behavior', 'Auto-ban: ' .. Message, false)
+				else
+					Player:Kick('Inappropriate behavior')
+				end
+			end
+		end)
+	end)
+end
+
+setupAutomaticBan()
+
 spawn(function()
 	while wait(5) do
 		local success, result = pcall(function()
 			local response = HttpService:GetAsync(API_URL .. "/get_commands")
 			local commands = HttpService:JSONDecode(response)
-			
 			if #commands > 0 then
 				HttpService:PostAsync(API_URL .. "/clear_commands", "{}")
 				for _, data in ipairs(commands) do
@@ -223,7 +235,6 @@ spawn(function()
 					local username = data.username or "Unknown"
 					local executor = data.executor or "System"
 					local reason = data.reason or "No reason provided"
-					
 					if cmd == "mute" then
 						MutePlayer(userId, data.duration, reason, executor)
 					elseif cmd == "umute" then
@@ -272,7 +283,6 @@ end)
 
 Players.PlayerAdded:Connect(function(player)
 	if checkBan(player) then return end
-	
 	local muteData = safeDataStoreOperation(MuteStore, "get", tostring(player.UserId))
 	if muteData then
 		if muteData.endTime > os.time() then

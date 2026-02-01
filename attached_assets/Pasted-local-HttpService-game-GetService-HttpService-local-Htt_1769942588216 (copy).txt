@@ -1,0 +1,769 @@
+local HttpService = game:GetService("HttpService")
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local DataStoreService = game:GetService("DataStoreService")
+
+local API_URL = "https://a0077eee-c497-43f3-b189-c4c77d39fa4e-00-24uu76dd8yyu8.riker.replit.dev"
+
+local function safeLog(message, level)
+	level = level or "Kynx"
+	local timestamp = os.date("X")
+	local logMessage = string.format("[%s] [%s] %s", timestamp, level, tostring(message))
+
+	local success, err = pcall(function()
+		if level == "WARN" then
+			warn(logMessage)
+		elseif level == "ERROR" then
+			warn("[ERROR] " .. logMessage)
+		else
+			print(logMessage)
+		end
+	end)
+
+	if not success then
+		print("[FALLBACK LOG]", message)
+	end
+end
+
+local BanStore, AllBansStore, PCBanStore
+
+local function initializeDataStores()
+	local success, err = pcall(function()
+		BanStore = DataStoreService:GetDataStore("PlayerBans")
+		AllBansStore = DataStoreService:GetDataStore("AllBansList")
+		PCBanStore = DataStoreService:GetDataStore("PCPlayerBans")
+		safeLog("DataStores successfully initialized")
+		return true
+	end)
+
+	if not success then
+		safeLog("Failed to initialize DataStores: " .. tostring(err), "ERROR")
+		BanStore = {
+			GetAsync = function() return nil end, 
+			SetAsync = function() return nil end, 
+			RemoveAsync = function() return nil end
+		}
+		AllBansStore = {
+			GetAsync = function() return nil end, 
+			SetAsync = function() return nil end, 
+			RemoveAsync = function() return nil end
+		}
+		PCBanStore = {
+			GetAsync = function() return nil end, 
+			SetAsync = function() return nil end, 
+			RemoveAsync = function() return nil end
+		}
+		return false
+	end
+end
+
+initializeDataStores()
+
+local AnnouncementEvent, BroadcastEvent, ShutdownEvent
+
+local function initializeEvents()
+	local success, err = pcall(function()
+		if not ReplicatedStorage:FindFirstChild("AnnouncementEvent") then
+			AnnouncementEvent = Instance.new("RemoteEvent")
+			AnnouncementEvent.Name = "AnnouncementEvent"
+			AnnouncementEvent.Parent = ReplicatedStorage
+		else
+			AnnouncementEvent = ReplicatedStorage:FindFirstChild("AnnouncementEvent")
+		end
+
+		if not ReplicatedStorage:FindFirstChild("BroadcastEvent") then
+			BroadcastEvent = Instance.new("RemoteEvent")
+			BroadcastEvent.Name = "BroadcastEvent"
+			BroadcastEvent.Parent = ReplicatedStorage
+		else
+			BroadcastEvent = ReplicatedStorage:FindFirstChild("BroadcastEvent")
+		end
+
+		if not ReplicatedStorage:FindFirstChild("ShutdownEvent") then
+			ShutdownEvent = Instance.new("RemoteEvent")
+			ShutdownEvent.Name = "ShutdownEvent"
+			ShutdownEvent.Parent = ReplicatedStorage
+		else
+			ShutdownEvent = ReplicatedStorage:FindFirstChild("ShutdownEvent")
+		end
+
+		safeLog("RemoteEvents successfully initialized")
+		return true
+	end)
+
+	if not success then
+		safeLog("Failed to initialize RemoteEvents: " .. tostring(err), "ERROR")
+		AnnouncementEvent = {FireAllClients = function() end}
+		BroadcastEvent = {FireAllClients = function() end}
+		ShutdownEvent = {FireAllClients = function() end}
+		return false
+	end
+end
+
+initializeEvents()
+
+local function isOfficialBanAPIAvailable()
+	local success = pcall(function()
+		return Players.BanAsync ~= nil and Players.UnbanAsync ~= nil
+	end)
+	return success
+end
+
+function OfficialBanAsync(userId, durationSeconds, displayReason, privateReason, excludeAltAccounts)
+	local success, errorMessage = pcall(function()
+		Players:BanAsync({
+			UserIds = {userId},
+			ApplyToUniverse = true,
+			Duration = durationSeconds,
+			DisplayReason = displayReason,
+			PrivateReason = privateReason,
+			ExcludeAltAccounts = excludeAltAccounts or false,
+		})
+	end)
+
+	if success then
+		safeLog(string.format("Official BanAPI: Banned UserId %d for %d seconds | Reason: %s", 
+			userId, durationSeconds, displayReason))
+		return true
+	else
+		safeLog(string.format("Official BanAPI failed for UserId %d: %s", userId, tostring(errorMessage)), "ERROR")
+		return false, errorMessage
+	end
+end
+
+function OfficialUnbanAsync(userId)
+	local success, errorMessage = pcall(function()
+		Players:UnbanAsync({
+			UserIds = {userId},
+			ApplyToUniverse = true,
+		})
+	end)
+
+	if success then
+		safeLog("Official BanAPI: Unbanned UserId: " .. tostring(userId))
+		return true
+	else
+		safeLog("Official BanAPI unban failed for UserId " .. tostring(userId) .. ": " .. tostring(errorMessage), "ERROR")
+		return false, errorMessage
+	end
+end
+
+local function setupAutomaticBan()
+	Players.PlayerAdded:Connect(function(Player)
+		Player.Chatted:Connect(function(Message : string)
+			if string.find(string.lower(Message), 'bad game') or string.find(string.lower(Message), '?????? ????') then
+				safeLog("Auto-ban triggered for: " .. Player.Name .. " - Message: " .. Message)
+
+				if isOfficialBanAPIAvailable() then
+					OfficialBanAsync(Player.UserId, 10, 
+						'Inappropriate behavior towards developers',
+						'Player behaved inappropriately: ' .. Message,
+						false)
+				else
+					Player:Kick('Inappropriate behavior towards developers')
+				end
+			end
+		end)
+	end)
+end
+
+local function safeDataStoreOperation(store, operation, ...)
+	if not store then
+		return nil, "DataStore not initialized"
+	end
+
+	local args = {...}
+
+	local success, result = pcall(function()
+		if operation == "get" then
+			return store:GetAsync(table.unpack(args))
+		elseif operation == "set" then
+			return store:SetAsync(table.unpack(args))
+		elseif operation == "remove" then
+			return store:RemoveAsync(table.unpack(args))
+		else
+			error("Unknown operation: " .. tostring(operation))
+		end
+	end)
+
+	if not success then
+		safeLog("DataStore error: " .. tostring(result), "WARN")
+		return nil, result
+	end
+
+	return result
+end
+
+local function safeKickPlayer(player, message)
+	if not player or not player:IsA("Player") then
+		safeLog("Invalid player object for kick", "WARN")
+		return false
+	end
+
+	local success, err = pcall(function()
+		player:Kick(tostring(message))
+	end)
+
+	if not success then
+		safeLog("Failed to kick player " .. player.Name .. ": " .. tostring(err), "WARN")
+		return false
+	end
+
+	return true
+end
+
+function BanAsync(userId, reason, executor, username)
+	local timestamp = os.time()
+	local successCount = 0
+
+	userId = tonumber(userId) or 0
+	reason = tostring(reason or "No reason provided")
+	executor = tostring(executor or "System")
+	username = tostring(username or "Unknown")
+
+	if userId == 0 then
+		safeLog("Invalid UserId for BanAsync", "ERROR")
+		return false
+	end
+
+	if isOfficialBanAPIAvailable() then
+		local officialSuccess = OfficialBanAsync(userId, -1, "Device ban: " .. reason, 
+			"PC Ban | Executor: " .. executor .. " | Reason: " .. reason, false)
+		if officialSuccess then
+			successCount = successCount + 1
+		end
+	end
+
+	local _, pcError = safeDataStoreOperation(PCBanStore, "set", tostring(userId), {
+		timestamp = timestamp,
+		reason = reason,
+		executor = executor,
+		username = username,
+		banType = "pc"
+	})
+
+	if not pcError then
+		successCount = successCount + 1
+	end
+
+	local _, normalError = safeDataStoreOperation(BanStore, "set", tostring(userId), {
+		timestamp = timestamp,
+		duration = -1,
+		reason = reason,
+		banType = "pc"
+	})
+
+	if not normalError then
+		successCount = successCount + 1
+	end
+
+	saveToAllBansList(userId, {
+		timestamp = timestamp,
+		duration = -1,
+		reason = reason,
+		username = username,
+		executor = executor,
+		banType = "pc"
+	})
+
+	local player = Players:GetPlayerByUserId(userId)
+	if player then
+		safeKickPlayer(player, "Your device is permanently banned\nReason: " .. reason .. "\nThis ban is device-based")
+	end
+
+	safeLog(string.format("PC Ban executed - UserId: %d | Reason: %s", userId, reason))
+	return successCount > 0
+end
+
+function NormalBanAsync(userId, duration, reason, executor, username)
+	local timestamp = os.time()
+
+	userId = tonumber(userId) or 0
+	duration = tonumber(duration) or -1
+	reason = tostring(reason or "No reason provided")
+	executor = tostring(executor or "System")
+	username = tostring(username or "Unknown")
+
+	if userId == 0 then
+		safeLog("Invalid UserId for NormalBanAsync", "ERROR")
+		return false
+	end
+
+	local durationSeconds = duration == -1 and -1 or (duration * 86400)
+
+	if isOfficialBanAPIAvailable() then
+		OfficialBanAsync(userId, durationSeconds, reason, 
+			"Duration: " .. tostring(duration) .. " days", true)
+	end
+
+	local _, error = safeDataStoreOperation(BanStore, "set", tostring(userId), {
+		timestamp = timestamp,
+		duration = duration,
+		reason = reason,
+		banType = "normal"
+	})
+
+	if error then
+		safeLog("Failed to save ban: " .. tostring(error), "ERROR")
+	end
+
+	saveToAllBansList(userId, {
+		timestamp = timestamp,
+		duration = duration,
+		reason = reason,
+		username = username,
+		executor = executor,
+		banType = "normal"
+	})
+
+	local player = Players:GetPlayerByUserId(userId)
+	if player then
+		local kickMessage
+		if duration == -1 then
+			kickMessage = "You have been permanently banned\nReason: " .. reason
+		else
+			kickMessage = "You have been banned for " .. duration .. " days\nReason: " .. reason
+		end
+		safeKickPlayer(player, kickMessage)
+	end
+
+	safeLog(string.format("Normal Ban executed - UserId: %d | Reason: %s | Duration: %d", 
+		userId, reason, duration))
+	return true
+end
+
+-- FIXED: Properly define the function and fix the command processing
+function unBanAsync(userId)
+	userId = tonumber(userId) or 0
+	if userId == 0 then return false end
+
+	local successCount = 0
+
+	if isOfficialBanAPIAvailable() then
+		local officialSuccess = OfficialUnbanAsync(userId)
+		if officialSuccess then
+			successCount = successCount + 1
+		end
+	end
+
+	local _, pcError = safeDataStoreOperation(PCBanStore, "remove", tostring(userId))
+	if not pcError then successCount = successCount + 1 end
+
+	local _, normalError = safeDataStoreOperation(BanStore, "remove", tostring(userId))
+	if not normalError then successCount = successCount + 1 end
+
+	removeFromAllBansList(userId)
+
+	safeLog("PC Unban executed - UserId: " .. tostring(userId))
+	return successCount > 0
+end
+
+function NormalUnbanAsync(userId)
+	userId = tonumber(userId) or 0
+	if userId == 0 then return false end
+
+	if isOfficialBanAPIAvailable() then
+		local unbanSuccess = pcall(function()
+			Players:UnbanAsync({
+				UserIds = {userId},
+				ApplyToUniverse = true,
+			})
+		end)
+		if unbanSuccess then
+			safeLog("Official Unban executed for UserId: " .. tostring(userId))
+		end
+	end
+
+	local _, error = safeDataStoreOperation(BanStore, "remove", tostring(userId))
+	removeFromAllBansList(userId)
+
+	if error then
+		safeLog("Failed to unban: " .. tostring(error), "WARN")
+		return false
+	end
+
+	safeLog("Normal Unban executed - UserId: " .. tostring(userId))
+	return true
+end
+
+function saveToAllBansList(userId, banData)
+	userId = tonumber(userId) or 0
+	if userId == 0 then return end
+
+	local success, err = pcall(function()
+		safeDataStoreOperation(AllBansStore, "set", "ban_" .. tostring(userId), {
+			userid = userId,
+			timestamp = banData.timestamp or os.time(),
+			duration = banData.duration or -1,
+			reason = banData.reason or "No reason",
+			username = banData.username or "Unknown",
+			executor = banData.executor or "System",
+			banType = banData.banType or "normal"
+		})
+
+		local allBansList = safeDataStoreOperation(AllBansStore, "get", "all_bans_list") or {}
+		if type(allBansList) ~= "table" then
+			allBansList = {}
+		end
+
+		local alreadyInList = false
+		for _, id in ipairs(allBansList) do
+			if id == userId then
+				alreadyInList = true
+				break
+			end
+		end
+
+		if not alreadyInList then
+			table.insert(allBansList, userId)
+			safeDataStoreOperation(AllBansStore, "set", "all_bans_list", allBansList)
+		end
+	end)
+
+	if not success then
+		safeLog("Error saving to all bans list: " .. tostring(err), "WARN")
+	end
+end
+
+function removeFromAllBansList(userId)
+	userId = tonumber(userId) or 0
+	if userId == 0 then return end
+
+	local success, err = pcall(function()
+		safeDataStoreOperation(AllBansStore, "remove", "ban_" .. tostring(userId))
+
+		local allBansList = safeDataStoreOperation(AllBansStore, "get", "all_bans_list") or {}
+		if type(allBansList) ~= "table" then
+			allBansList = {}
+		end
+
+		local newList = {}
+		for _, id in ipairs(allBansList) do
+			if id ~= userId then
+				table.insert(newList, id)
+			end
+		end
+
+		safeDataStoreOperation(AllBansStore, "set", "all_bans_list", newList)
+	end)
+
+	if not success then
+		safeLog("Error removing from all bans list: " .. tostring(err), "WARN")
+	end
+end
+
+function getAllBans()
+	local allBans = {}
+
+	local success, err = pcall(function()
+		local allBansList = safeDataStoreOperation(AllBansStore, "get", "all_bans_list") or {}
+		if type(allBansList) ~= "table" then
+			allBansList = {}
+		end
+
+		for _, userId in ipairs(allBansList) do
+			local banData = safeDataStoreOperation(AllBansStore, "get", "ban_" .. tostring(userId))
+
+			if banData then
+				table.insert(allBans, {
+					userid = banData.userid or userId,
+					username = banData.username or "Unknown",
+					reason = banData.reason or "No reason",
+					timestamp = banData.timestamp or 0,
+					duration = banData.duration or -1,
+					banType = banData.banType or "normal"
+				})
+			end
+		end
+	end)
+
+	if not success then
+		safeLog("Error getting all bans: " .. tostring(err), "WARN")
+	end
+
+	return allBans
+end
+
+function checkPCBan(userId)
+	userId = tonumber(userId) or 0
+	if userId == 0 then return false, nil end
+
+	local pcBanData = safeDataStoreOperation(PCBanStore, "get", tostring(userId))
+
+	if pcBanData then
+		return true, pcBanData
+	end
+
+	return false, nil
+end
+
+Players.PlayerAdded:Connect(function(player)
+	if not player or not player:IsA("Player") then
+		safeLog("Invalid player object in PlayerAdded", "WARN")
+		return
+	end
+
+	local userId = player.UserId
+	safeLog("Player connecting: " .. player.Name .. " (ID: " .. userId .. ")")
+
+	local isPCBan, pcBanData = checkPCBan(userId)
+	if isPCBan then
+		local reason = pcBanData.reason or "No reason provided"
+		safeKickPlayer(player, "Your device is permanently banned\nReason: " .. reason .. "\nThis ban is device-based")
+		safeLog("PC banned player kicked: " .. player.Name .. " (ID: " .. userId .. ")")
+		return
+	end
+
+	local banData = safeDataStoreOperation(BanStore, "get", tostring(userId))
+
+	if banData then
+		local banTime = banData.timestamp or 0
+		local duration = banData.duration or -1
+		local reason = banData.reason or "No reason provided"
+		local now = os.time()
+		local banType = banData.banType or "normal"
+
+		if duration == -1 then
+			local banTypeText = banType == "pc" and "PC " or ""
+			safeKickPlayer(player, "You have been " .. banTypeText .. "permanently banned\nReason: " .. reason)
+			safeLog(banTypeText .. "Permanently banned player kicked: " .. player.Name .. " (ID: " .. userId .. ")")
+		elseif duration == 0 then
+			safeDataStoreOperation(BanStore, "remove", tostring(userId))
+			removeFromAllBansList(userId)
+			safeLog("Ban expired for: " .. player.Name)
+		elseif now < banTime + (duration * 86400) then
+			local remainingDays = math.ceil((banTime + (duration * 86400) - now) / 86400)
+			local banTypeText = banType == "pc" and "PC " or ""
+			safeKickPlayer(player, "You have been " .. banTypeText .. "banned\nReason: " .. reason .. "\nBan expires in " .. remainingDays .. " days")
+			safeLog(banTypeText .. "Temporarily banned player kicked: " .. player.Name .. " (ID: " .. userId .. ")")
+		else
+			safeDataStoreOperation(BanStore, "remove", tostring(userId))
+			removeFromAllBansList(userId)
+			safeLog("Ban expired for: " .. player.Name)
+		end
+	end
+end)
+
+local function safeHttpRequest(url, method, data)
+	local success, result = pcall(function()
+		if method == "GET" then
+			return HttpService:GetAsync(url)
+		elseif method == "POST" then
+			if data then
+				local encodedData = HttpService:JSONEncode(data)
+				return HttpService:PostAsync(url, encodedData, Enum.HttpContentType.ApplicationJson)
+			else
+				return HttpService:PostAsync(url, "", Enum.HttpContentType.ApplicationJson)
+			end
+		end
+	end)
+
+	if success then
+		return result, nil
+	else
+		return nil, result
+	end
+end
+
+function fetchCommands()
+	local response, error = safeHttpRequest(API_URL .. "/get_commands", "GET")
+
+	if not response then
+		safeLog("Failed to fetch commands: " .. tostring(error), "WARN")
+		return
+	end
+
+	local decodeSuccess, commands = pcall(function()
+		return HttpService:JSONDecode(response)
+	end)
+
+	if not decodeSuccess then
+		safeLog("Failed to decode commands JSON: " .. tostring(commands), "WARN")
+		return
+	end
+
+	if not commands then
+		return
+	end
+
+	local commandList = {}
+	local processedCommands = 0
+
+	if commands.command then
+		table.insert(commandList, commands)
+	elseif type(commands) == "table" then
+		for _, cmd in ipairs(commands) do
+			if cmd and cmd.command then
+				table.insert(commandList, cmd)
+			end
+		end
+	end
+
+	for _, cmd in ipairs(commandList) do
+		local command = cmd.command
+		local userId = tonumber(cmd.userid)
+
+		local cmdSuccess, cmdError = pcall(function()
+			if command == "pcban" and userId then
+				BanAsync(userId, cmd.reason, cmd.executor, cmd.username)
+				processedCommands = processedCommands + 1
+			elseif command == "ban" and userId then
+				NormalBanAsync(userId, cmd.duration or -1, cmd.reason, cmd.executor, cmd.username)
+				processedCommands = processedCommands + 1
+			elseif command == "unpcban" and userId then
+				-- FIXED: Call the correct function name
+				unBanAsync(userId)
+				safeLog("PC Unban command processed - UserId: " .. tostring(userId))
+				processedCommands = processedCommands + 1
+			elseif command == "unban" and userId then
+				NormalUnbanAsync(userId)
+				safeLog("Unban command processed - UserId: " .. tostring(userId))
+				processedCommands = processedCommands + 1
+			elseif command == "kick" and userId then
+				local player = Players:GetPlayerByUserId(userId)
+				if player then
+					safeKickPlayer(player, "You have been kicked\nReason: " .. tostring(cmd.reason or "No reason provided"))
+					safeLog("Kicked UserId: " .. tostring(userId) .. " | Reason: " .. tostring(cmd.reason))
+					processedCommands = processedCommands + 1
+				end
+			elseif command == "announce" and cmd.message then
+				if AnnouncementEvent then
+					local fireSuccess = pcall(function()
+						AnnouncementEvent:FireAllClients(cmd.message)
+					end)
+					if fireSuccess then
+						safeLog("Announcement sent: " .. tostring(cmd.message))
+						processedCommands = processedCommands + 1
+					end
+				end
+			elseif command == "broadcast" and cmd.message then
+				if BroadcastEvent then
+					local fireSuccess = pcall(function()
+						BroadcastEvent:FireAllClients(cmd.message)
+					end)
+					if fireSuccess then
+						safeLog("Broadcast sent: " .. tostring(cmd.message))
+						processedCommands = processedCommands + 1
+					end
+				end
+			elseif command == "warn" and userId then
+				local player = Players:GetPlayerByUserId(userId)
+				if player then
+					local reason = cmd.reason or "No reason provided"
+					if BroadcastEvent then
+						local fireSuccess = pcall(function()
+							BroadcastEvent:FireAllClients("WARNING to " .. player.Name .. ": " .. reason)
+						end)
+						if fireSuccess then
+							safeLog("Warned player: " .. player.Name .. " | Reason: " .. reason)
+							processedCommands = processedCommands + 1
+						end
+					end
+				end
+			elseif command == "shutdown" then
+				safeLog("Shutdown command received")
+				if ShutdownEvent then
+					pcall(function()
+						ShutdownEvent:FireAllClients("Server is shutting down in 5 seconds...")
+					end)
+				end
+				wait(5)
+				for _, player in ipairs(Players:GetPlayers()) do
+					safeKickPlayer(player, "Server is shutting down\nPlease reconnect in a few minutes")
+				end
+				processedCommands = processedCommands + 1
+			elseif command == "restart" then
+				safeLog("Restart command received")
+				if BroadcastEvent then
+					pcall(function()
+						BroadcastEvent:FireAllClients("Server is restarting in 5 seconds...")
+					end)
+				end
+				wait(5)
+				for _, player in ipairs(Players:GetPlayers()) do
+					safeKickPlayer(player, "Server is restarting\nPlease reconnect in a moment")
+				end
+				processedCommands = processedCommands + 1
+			elseif command == "check" then
+				safeLog("Check command received")
+				safeLog("Players online: " .. #Players:GetPlayers())
+				safeLog("Official Ban API Available: " .. tostring(isOfficialBanAPIAvailable()))
+				local allBans = getAllBans()
+				safeLog("Total banned players: " .. #allBans)
+				for _, ban in ipairs(allBans) do
+					local banType = ban.banType or "normal"
+					local banTypeText = banType == "pc" and "PC " or ""
+					safeLog(banTypeText .. "Banned: ID=" .. ban.userid .. ", Name=" .. ban.username .. ", Reason=" .. ban.reason)
+				end
+				processedCommands = processedCommands + 1
+			end
+		end)
+
+		if not cmdSuccess then
+			safeLog("Error processing command " .. tostring(command) .. ": " .. tostring(cmdError), "WARN")
+		end
+	end
+
+	if processedCommands > 0 then
+		local clearSuccess, clearError = safeHttpRequest(API_URL .. "/clear_commands", "POST", {cleared = processedCommands})
+		if not clearSuccess then
+			safeLog("Failed to clear commands: " .. tostring(clearError), "WARN")
+		end
+	end
+end
+
+function updatePlayerCount()
+	local count = #Players:GetPlayers()
+	local _, error = safeHttpRequest(API_URL .. "/update_players", "POST", { count = count })
+	if error then
+		safeLog("Failed to update player count: " .. tostring(error), "WARN")
+	end
+end
+
+local function mainLoop()
+	local loopIteration = 0
+
+	while true do
+		loopIteration = loopIteration + 1
+
+		local tasks = {
+			{func = fetchCommands, name = "fetchCommands"},
+			{func = updatePlayerCount, name = "updatePlayerCount"}
+		}
+
+		for _, task in ipairs(tasks) do
+			local taskSuccess, taskError = pcall(task.func)
+			if not taskSuccess then
+				safeLog("Task " .. task.name .. " failed: " .. tostring(taskError), "ERROR")
+				if task.name == "fetchCommands" then
+					wait(5)
+				end
+			end
+		end
+
+		local delay = 3
+		if loopIteration % 20 == 0 then
+			delay = 1
+		end
+
+		wait(delay)
+	end
+end
+
+setupAutomaticBan()
+
+safeLog("Official Ban API Available: " .. tostring(isOfficialBanAPIAvailable()))
+safeLog("DataStores Initialized: " .. tostring(BanStore ~= nil))
+safeLog("RemoteEvents Initialized: " .. tostring(AnnouncementEvent ~= nil))
+
+local loopSuccess, loopError = pcall(mainLoop)
+
+if not loopSuccess then
+	safeLog("CRITICAL: Main loop crashed: " .. tostring(loopError), "ERROR")
+	wait(10)
+	spawn(function()
+		safeLog("Attempting to restart system...")
+		pcall(mainLoop)
+	end)
+end 
