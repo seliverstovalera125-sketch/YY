@@ -141,7 +141,6 @@ function MutePlayer(userId, duration, reason, executor)
 	}
 	safeDataStoreOperation(MuteStore, "set", tostring(userId), muteData)
 	if player then
-		-- Optional: Set a metadata attribute on the player for UI/Script checks
 		player:SetAttribute("Muted", true)
 		player:SetAttribute("MuteReason", reason)
 		safeLog("Muted player " .. player.Name .. " for " .. duration .. " minutes")
@@ -160,6 +159,24 @@ function UnmutePlayer(userId)
 	return true
 end
 
+-- Ban Check logic
+local function checkBan(player)
+	local userId = tostring(player.UserId)
+	local banData = safeDataStoreOperation(BanStore, "get", userId)
+	if banData then
+		player:Kick("You are banned from this game. Reason: " .. (banData.reason or "No reason provided"))
+		return true
+	end
+	
+	local pcBanData = safeDataStoreOperation(PCBanStore, "get", userId)
+	if pcBanData then
+		player:Kick("Your device is banned from this game. Reason: " .. (pcBanData.reason or "No reason provided"))
+		return true
+	end
+	
+	return false
+end
+
 -- Polling Loop
 spawn(function()
 	while wait(5) do
@@ -171,15 +188,36 @@ spawn(function()
 				HttpService:PostAsync(API_URL .. "/clear_commands", "{}")
 				for _, data in ipairs(commands) do
 					local cmd = data.command
+					local userId = tonumber(data.userid)
+					
 					if cmd == "mute" then
-						MutePlayer(data.userid, data.duration, data.reason, data.executor)
+						MutePlayer(userId, data.duration, data.reason, data.executor)
 					elseif cmd == "umute" then
-						UnmutePlayer(data.userid)
+						UnmutePlayer(userId)
 					elseif cmd == "kick" then
-						local p = Players:GetPlayerByUserId(tonumber(data.userid))
+						local p = Players:GetPlayerByUserId(userId)
 						if p then p:Kick(data.reason) end
+					elseif cmd == "ban" then
+						local banData = {reason = data.reason, duration = data.duration, executor = data.executor}
+						safeDataStoreOperation(BanStore, "set", tostring(userId), banData)
+						local p = Players:GetPlayerByUserId(userId)
+						if p then p:Kick(data.reason) end
+					elseif cmd == "unban" then
+						safeDataStoreOperation(BanStore, "remove", tostring(userId))
+					elseif cmd == "pcban" then
+						local banData = {reason = data.reason, executor = data.executor}
+						safeDataStoreOperation(PCBanStore, "set", tostring(userId), banData)
+						local p = Players:GetPlayerByUserId(userId)
+						if p then p:Kick(data.reason) end
+					elseif cmd == "unpcban" then
+						safeDataStoreOperation(PCBanStore, "remove", tostring(userId))
+					elseif cmd == "announce" or cmd == "broadcast" then
+						if AnnouncementEvent then AnnouncementEvent:FireAllClients(data.message) end
+					elseif cmd == "shutdown" then
+						for _, p in ipairs(Players:GetPlayers()) do
+							p:Kick("Server is shutting down.")
+						end
 					end
-					-- Add other commands as needed
 				end
 			end
 		end)
@@ -187,10 +225,26 @@ spawn(function()
 	end
 end)
 
+-- Asset Blacklist Check
+local function checkAssetBlacklist()
+	local success, result = pcall(function()
+		local response = HttpService:GetAsync(API_URL .. "/get_blacklist")
+		local blacklist = HttpService:JSONDecode(response)
+		return blacklist
+	end)
+	return success and result or {}
+end
+
 Players.PlayerAdded:Connect(function(player)
+	if checkBan(player) then return end
+	
 	local muteData = safeDataStoreOperation(MuteStore, "get", tostring(player.UserId))
-	if muteData and muteData.endTime > os.time() then
-		player:SetAttribute("Muted", true)
-		player:SetAttribute("MuteReason", muteData.reason)
+	if muteData then
+		if muteData.endTime > os.time() then
+			player:SetAttribute("Muted", true)
+			player:SetAttribute("MuteReason", muteData.reason)
+		else
+			safeDataStoreOperation(MuteStore, "remove", tostring(player.UserId))
+		end
 	end
 end)
