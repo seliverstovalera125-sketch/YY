@@ -177,6 +177,37 @@ local function checkBan(player)
 	return false
 end
 
+function saveToAllBansList(userId, banData)
+	userId = tonumber(userId) or 0
+	if userId == 0 then return end
+	safeDataStoreOperation(AllBansStore, "set", "ban_" .. tostring(userId), {
+		userid = userId,
+		timestamp = banData.timestamp or os.time(),
+		duration = banData.duration or -1,
+		reason = banData.reason or "No reason",
+		username = banData.username or "Unknown",
+		executor = banData.executor or "System",
+		banType = banData.banType or "normal"
+	})
+	local allBansList = safeDataStoreOperation(AllBansStore, "get", "all_bans_list") or {}
+	local alreadyInList = false
+	for _, id in ipairs(allBansList) do if id == userId then alreadyInList = true break end end
+	if not alreadyInList then
+		table.insert(allBansList, userId)
+		safeDataStoreOperation(AllBansStore, "set", "all_bans_list", allBansList)
+	end
+end
+
+function removeFromAllBansList(userId)
+	userId = tonumber(userId) or 0
+	if userId == 0 then return end
+	safeDataStoreOperation(AllBansStore, "remove", "ban_" .. tostring(userId))
+	local allBansList = safeDataStoreOperation(AllBansStore, "get", "all_bans_list") or {}
+	local newList = {}
+	for _, id in ipairs(allBansList) do if id ~= userId then table.insert(newList, id) end end
+	safeDataStoreOperation(AllBansStore, "set", "all_bans_list", newList)
+end
+
 -- Polling Loop
 spawn(function()
 	while wait(5) do
@@ -189,34 +220,48 @@ spawn(function()
 				for _, data in ipairs(commands) do
 					local cmd = data.command
 					local userId = tonumber(data.userid)
+					local username = data.username or "Unknown"
+					local executor = data.executor or "System"
+					local reason = data.reason or "No reason provided"
 					
 					if cmd == "mute" then
-						MutePlayer(userId, data.duration, data.reason, data.executor)
+						MutePlayer(userId, data.duration, reason, executor)
 					elseif cmd == "umute" then
 						UnmutePlayer(userId)
 					elseif cmd == "kick" then
 						local p = Players:GetPlayerByUserId(userId)
-						if p then p:Kick(data.reason) end
+						if p then p:Kick(reason) end
 					elseif cmd == "ban" then
-						local banData = {reason = data.reason, duration = data.duration, executor = data.executor}
+						local duration = tonumber(data.duration) or -1
+						local banData = {reason = reason, duration = duration, executor = executor, timestamp = os.time(), username = username, banType = "normal"}
 						safeDataStoreOperation(BanStore, "set", tostring(userId), banData)
+						saveToAllBansList(userId, banData)
+						if isOfficialBanAPIAvailable() then
+							OfficialBanAsync(userId, duration == -1 and -1 or (duration * 86400), reason, "Executor: " .. executor, true)
+						end
 						local p = Players:GetPlayerByUserId(userId)
-						if p then p:Kick(data.reason) end
+						if p then p:Kick(reason) end
 					elseif cmd == "unban" then
 						safeDataStoreOperation(BanStore, "remove", tostring(userId))
+						removeFromAllBansList(userId)
+						if isOfficialBanAPIAvailable() then OfficialUnbanAsync(userId) end
 					elseif cmd == "pcban" then
-						local banData = {reason = data.reason, executor = data.executor}
+						local banData = {reason = reason, executor = executor, timestamp = os.time(), username = username, banType = "pc"}
 						safeDataStoreOperation(PCBanStore, "set", tostring(userId), banData)
+						saveToAllBansList(userId, banData)
+						if isOfficialBanAPIAvailable() then
+							OfficialBanAsync(userId, -1, "PC Ban: " .. reason, "PC Ban | Executor: " .. executor, false)
+						end
 						local p = Players:GetPlayerByUserId(userId)
-						if p then p:Kick(data.reason) end
+						if p then p:Kick("Your device is banned: " .. reason) end
 					elseif cmd == "unpcban" then
 						safeDataStoreOperation(PCBanStore, "remove", tostring(userId))
+						removeFromAllBansList(userId)
+						if isOfficialBanAPIAvailable() then OfficialUnbanAsync(userId) end
 					elseif cmd == "announce" or cmd == "broadcast" then
 						if AnnouncementEvent then AnnouncementEvent:FireAllClients(data.message) end
 					elseif cmd == "shutdown" then
-						for _, p in ipairs(Players:GetPlayers()) do
-							p:Kick("Server is shutting down.")
-						end
+						for _, p in ipairs(Players:GetPlayers()) do p:Kick("Server is shutting down.") end
 					end
 				end
 			end
@@ -224,16 +269,6 @@ spawn(function()
 		if not success then safeLog("Polling error: " .. tostring(result), "WARN") end
 	end
 end)
-
--- Asset Blacklist Check
-local function checkAssetBlacklist()
-	local success, result = pcall(function()
-		local response = HttpService:GetAsync(API_URL .. "/get_blacklist")
-		local blacklist = HttpService:JSONDecode(response)
-		return blacklist
-	end)
-	return success and result or {}
-end
 
 Players.PlayerAdded:Connect(function(player)
 	if checkBan(player) then return end
