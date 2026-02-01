@@ -224,14 +224,21 @@ class ConfirmActionView(View):
                     description="Server shutdown command sent.",
                     color=discord.Color.red(),
                     moderator=interaction.user)
-            elif self.action == "warn":
+            elif self.action == "mute":
                 embed = ModerationEmbed(
-                    title="⚠️ Player Warned",
-                    description=f"**{self.username}** has been warned.",
+                    title="✅ Mute Executed",
+                    description=f"**{self.username}** has been muted for {self.duration} minutes.",
                     color=discord.Color.orange(),
                     target_user=f"{self.username} ({self.userid})",
                     moderator=interaction.user)
                 embed.add_field(name="Reason", value=self.reason, inline=False)
+            elif self.action == "umute":
+                embed = ModerationEmbed(
+                    title="✅ Unmute Executed",
+                    description=f"**{self.username}** has been unmuted.",
+                    color=discord.Color.green(),
+                    target_user=f"{self.username} ({self.userid})",
+                    moderator=interaction.user)
             else:
                 embed = ModerationEmbed(
                     title="✅ Action Completed",
