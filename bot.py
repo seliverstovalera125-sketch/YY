@@ -2823,6 +2823,104 @@ async def clearblacklist_command(interaction: discord.Interaction):
 
 
 # ===== HELP COMMANDS =====
+# ===== HWID COMMANDS =====
+
+@tree.command(name="hwid_block", description="Block a device by HWID")
+@app_commands.describe(hwid="The HWID to block")
+async def hwid_block_command(interaction: discord.Interaction, hwid: str):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
+    try:
+        res = requests.post(f"{API_URL}/hwid_block", json={"hwid": hwid}, timeout=5)
+        if res.status_code == 200:
+            embed = ModerationEmbed(title="✅ HWID Blocked", description=f"HWID `{hwid}` has been blocked.", color=discord.Color.red(), moderator=interaction.user)
+            await interaction.response.send_message(embed=embed)
+        else:
+            await interaction.response.send_message("❌ Failed to block HWID.")
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Error: {e}")
+
+@tree.command(name="hwid_unblock", description="Unblock a device by HWID")
+@app_commands.describe(hwid="The HWID to unblock")
+async def hwid_unblock_command(interaction: discord.Interaction, hwid: str):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
+    try:
+        res = requests.post(f"{API_URL}/hwid_unblock", json={"hwid": hwid}, timeout=5)
+        if res.status_code == 200:
+            embed = ModerationEmbed(title="✅ HWID Unblocked", description=f"HWID `{hwid}` has been unblocked.", color=discord.Color.green(), moderator=interaction.user)
+            await interaction.response.send_message(embed=embed)
+        else:
+            await interaction.response.send_message("❌ Failed to unblock HWID.")
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Error: {e}")
+
+@tree.command(name="get_blocked_hwids", description="List all blocked HWIDs")
+async def get_blocked_hwids_command(interaction: discord.Interaction):
+    try:
+        res = requests.get(f"{API_URL}/get_blocked_hwids", timeout=5)
+        if res.status_code == 200:
+            hwids = res.json().get("hwids", [])
+            hwid_text = "\n".join([f"`{h}`" for h in hwids]) if hwids else "No blocked HWIDs."
+            embed = ModerationEmbed(title="🚫 Blocked HWIDs", description=hwid_text, color=discord.Color.dark_grey(), moderator=interaction.user)
+            await interaction.response.send_message(embed=embed)
+        else:
+            await interaction.response.send_message("❌ Failed to fetch blocked HWIDs.")
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Error: {e}")
+
+@tree.command(name="get_player_hwid", description="Get the HWID of a player by their Roblox UserID")
+@app_commands.describe(userid="Roblox UserID")
+async def get_player_hwid_command(interaction: discord.Interaction, userid: str):
+    try:
+        res = requests.get(f"{API_URL}/get_player_hwid/{userid}", timeout=5)
+        if res.status_code == 200:
+            hwid = res.json().get("hwid")
+            if hwid:
+                embed = ModerationEmbed(title="🔍 Player HWID", description=f"UserID `{userid}` HWID: `{hwid}`", color=discord.Color.blue(), moderator=interaction.user)
+                await interaction.response.send_message(embed=embed)
+            else:
+                await interaction.response.send_message(f"❌ No HWID found for UserID `{userid}`.")
+        else:
+            await interaction.response.send_message("❌ Failed to fetch player HWID.")
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Error: {e}")
+
+@tree.command(name="get_players_by_hwid", description="Get all accounts associated with a specific HWID")
+@app_commands.describe(hwid="The HWID to search")
+async def get_players_by_hwid_command(interaction: discord.Interaction, hwid: str):
+    try:
+        res = requests.get(f"{API_URL}/get_players_by_hwid/{hwid}", timeout=5)
+        if res.status_code == 200:
+            users = res.json().get("users", [])
+            users_text = ", ".join([f"`{u}`" for u in users]) if users else "No users found for this HWID."
+            embed = ModerationEmbed(title="👥 Players by HWID", description=f"HWID: `{hwid}`\nUsers: {users_text}", color=discord.Color.blue(), moderator=interaction.user)
+            await interaction.response.send_message(embed=embed)
+        else:
+            await interaction.response.send_message("❌ Failed to fetch players by HWID.")
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Error: {e}")
+
+@tree.command(name="check_hwid", description="Check if a specific HWID is blocked")
+@app_commands.describe(hwid="The HWID to check")
+async def check_hwid_command(interaction: discord.Interaction, hwid: str):
+    try:
+        res = requests.get(f"{API_URL}/check_hwid/{hwid}", timeout=5)
+        if res.status_code == 200:
+            blocked = res.json().get("blocked", False)
+            status = "🚫 Blocked" if blocked else "✅ Clear"
+            embed = ModerationEmbed(title="🛡️ HWID Status", description=f"HWID: `{hwid}`\nStatus: {status}", color=discord.Color.orange() if blocked else discord.Color.green(), moderator=interaction.user)
+            await interaction.response.send_message(embed=embed)
+        else:
+            await interaction.response.send_message("❌ Failed to check HWID.")
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Error: {e}")
+
+
 @tree.command(name="help", description="Show all commands")
 async def help_command(interaction: discord.Interaction):
     embed = ModerationEmbed(
@@ -2869,6 +2967,15 @@ async def help_command(interaction: discord.Interaction):
 `/clearblacklist` - Clear all (Admin)""",
                     inline=False)
 
+    embed.add_field(name="**HWID Management**",
+                    value="""`/hwid_block [hwid]` - Block device
+`/hwid_unblock [hwid]` - Unblock device
+`/get_blocked_hwids` - List blocked devices
+`/get_player_hwid [id]` - Get player's HWID
+`/get_players_by_hwid [hwid]` - Accounts by HWID
+`/check_hwid [hwid]` - Check lock status""",
+                    inline=False)
+
     embed.add_field(name="**Admin Commands**",
                     value="""`/restart` - Restart server
 `/shutdown` - Stop server
@@ -2906,6 +3013,9 @@ async def cmds_command(interaction: discord.Interaction):
 
 **Asset Management:**
 `/blacklist`, `/unblacklist`, `/viewblacklist`, `/checkasset`, `/clearblacklist`
+
+**HWID Management:**
+`/hwid_block`, `/hwid_unblock`, `/get_blocked_hwids`, `/get_player_hwid`, `/get_players_by_hwid`, `/check_hwid`
 
 **Admin:**
 `/restart`, `/shutdown`, `/announce`, `/broadcast`, `/announcement`, `/logs`

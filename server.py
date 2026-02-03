@@ -6,6 +6,9 @@ commands = []
 player_count = 0
 banned_user_ids = set()
 blacklisted_asset_ids = set()
+blocked_hwids = set()
+player_hwids = {}  # userid -> hwid
+hwid_to_users = {} # hwid -> set(userids)
 
 
 @app.route("/")
@@ -145,6 +148,61 @@ def clear_blacklist_api():
 @app.route("/is_blacklisted/<string:asset_id>", methods=["GET"])
 def is_blacklisted(asset_id):
     return jsonify({"blacklisted": asset_id in blacklisted_asset_ids})
+
+
+# === HWID SYSTEM ===
+
+@app.route("/hwid_block", methods=["POST"])
+def hwid_block():
+    data = request.json
+    hwid = data.get("hwid")
+    if hwid:
+        blocked_hwids.add(str(hwid))
+        print(f"✅ Blocked HWID: {hwid}")
+        return jsonify({"status": "blocked"})
+    return jsonify({"error": "Missing hwid"}), 400
+
+@app.route("/hwid_unblock", methods=["POST"])
+def hwid_unblock():
+    data = request.json
+    hwid = data.get("hwid")
+    if hwid:
+        blocked_hwids.discard(str(hwid))
+        print(f"✅ Unblocked HWID: {hwid}")
+        return jsonify({"status": "unblocked"})
+    return jsonify({"error": "Missing hwid"}), 400
+
+@app.route("/get_blocked_hwids", methods=["GET"])
+def get_blocked_hwids():
+    return jsonify({"hwids": list(blocked_hwids)})
+
+@app.route("/update_hwid", methods=["POST"])
+def update_hwid():
+    data = request.json
+    userid = data.get("userid")
+    hwid = data.get("hwid")
+    if userid and hwid:
+        userid = str(userid)
+        hwid = str(hwid)
+        player_hwids[userid] = hwid
+        if hwid not in hwid_to_users:
+            hwid_to_users[hwid] = set()
+        hwid_to_users[hwid].add(userid)
+        return jsonify({"status": "updated"})
+    return jsonify({"error": "Missing userid or hwid"}), 400
+
+@app.route("/get_player_hwid/<string:userid>", methods=["GET"])
+def get_player_hwid(userid):
+    return jsonify({"hwid": player_hwids.get(str(userid))})
+
+@app.route("/get_players_by_hwid/<string:hwid>", methods=["GET"])
+def get_players_by_hwid(hwid):
+    users = hwid_to_users.get(str(hwid), set())
+    return jsonify({"users": list(users)})
+
+@app.route("/check_hwid/<string:hwid>", methods=["GET"])
+def check_hwid(hwid):
+    return jsonify({"blocked": str(hwid) in blocked_hwids})
 
 
 def run():
