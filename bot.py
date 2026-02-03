@@ -102,7 +102,7 @@ class ConfirmActionView(View):
                  userid: str,
                  reason: str,
                  username: str,
-                 interaction_user: discord.User,
+                 interaction_user: discord.User | discord.Member,
                  duration: int = -1,
                  is_admin=False,
                  ban_type: str = "normal"):
@@ -351,9 +351,9 @@ class BanListView(View):
 
     def __init__(self,
                  bans: list,
-                 interaction_user: discord.User,
+                 interaction_user: discord.User | discord.Member,
                  page: int = 1,
-                 saved_filename: str = None):
+                 saved_filename: str = ""):
         super().__init__(timeout=120)
         self.bans = bans
         self.page = page
@@ -364,9 +364,13 @@ class BanListView(View):
         self.saved_filename = saved_filename
 
         if self.page <= 1:
-            self.children[0].disabled = True
+            for child in self.children:
+                if isinstance(child, discord.ui.Button) and child.label == "◀ Previous":
+                    child.disabled = True
         if self.page >= self.total_pages:
-            self.children[1].disabled = True
+            for child in self.children:
+                if isinstance(child, discord.ui.Button) and child.label == "Next ▶":
+                    child.disabled = True
 
     def get_embed(self):
         start_idx = (self.page - 1) * self.items_per_page
@@ -544,7 +548,8 @@ class UnbanView(View):
     def __init__(self,
                  userid: str,
                  username: str,
-                 interaction_user: discord.User,
+                 display_name: str,
+                 interaction_user: discord.User | discord.Member,
                  ban_type: str = "normal"):
         super().__init__(timeout=60)
         self.userid = userid
@@ -624,7 +629,7 @@ class UnbanView(View):
 class PCBanView(View):
 
     def __init__(self, userid: str, reason: str, username: str,
-                 display_name: str, interaction_user: discord.User):
+                 display_name: str, interaction_user: discord.User | discord.Member):
         super().__init__(timeout=60)
         self.userid = userid
         self.reason = reason
@@ -706,7 +711,7 @@ class PCBanView(View):
 class UnPCBanView(View):
 
     def __init__(self, userid: str, username: str, display_name: str,
-                 interaction_user: discord.User):
+                 interaction_user: discord.User | discord.Member):
         super().__init__(timeout=60)
         self.userid = userid
         self.username = username
@@ -788,7 +793,7 @@ class UnPCBanView(View):
 
 class AnnounceView(View):
 
-    def __init__(self, message: str, interaction_user: discord.User):
+    def __init__(self, message: str, interaction_user: discord.User | discord.Member):
         super().__init__(timeout=60)
         self.message = message
         self.interaction_user = interaction_user
@@ -847,7 +852,7 @@ class AnnounceView(View):
 
 class BroadcastView(View):
 
-    def __init__(self, message: str, interaction_user: discord.User):
+    def __init__(self, message: str, interaction_user: discord.User | discord.Member):
         super().__init__(timeout=60)
         self.message = message
         self.interaction_user = interaction_user
@@ -908,7 +913,7 @@ class BroadcastView(View):
 class NoteView(View):
 
     def __init__(self, userid: str, note: str, username: str,
-                 display_name: str, interaction_user: discord.User):
+                 display_name: str, interaction_user: discord.User | discord.Member):
         super().__init__(timeout=60)
         self.userid = userid
         self.note = note
@@ -974,7 +979,7 @@ class NoteView(View):
 class CleanNotesView(View):
 
     def __init__(self, userid: str, username: str, display_name: str,
-                 interaction_user: discord.User):
+                 interaction_user: discord.User | discord.Member):
         super().__init__(timeout=60)
         self.userid = userid
         self.username = username
@@ -1037,12 +1042,16 @@ class CleanNotesView(View):
 def is_authorized(interaction: discord.Interaction) -> bool:
     if ALLOWED_ROLE_ID == 0:
         return True
+    if not isinstance(interaction.user, discord.Member):
+        return False
     return any(role.id == ALLOWED_ROLE_ID for role in interaction.user.roles)
 
 
 def is_admin(interaction: discord.Interaction) -> bool:
     if ADMIN_ROLE_ID == 0:
         return True
+    if not isinstance(interaction.user, discord.Member):
+        return False
     return any(role.id == ADMIN_ROLE_ID for role in interaction.user.roles)
 
 
@@ -1076,14 +1085,6 @@ def check_api():
         return response.status_code == 200
     except:
         return False
-
-
-@bot.event
-async def on_ready():
-    await tree.sync()
-    logger.info(f"Kynx SS 10 ready: {bot.user}")
-    await bot.change_presence(activity=discord.Activity(
-        type=discord.ActivityType.watching, name="Server Moderation"))
 
 
 # ===== KICK COMMANDS =====
@@ -1725,7 +1726,7 @@ async def unban_command(interaction: discord.Interaction,
         if roblox_data and roblox_data['avatar']:
             embed.set_thumbnail(url=roblox_data['avatar'])
 
-        view = UnbanView(userid, username, interaction.user, detected_ban_type)
+        view = UnbanView(userid, username, "", interaction.user, detected_ban_type)
         await interaction.followup.send(embed=embed, view=view)
 
     except:
@@ -1923,7 +1924,7 @@ async def warn_command(interaction: discord.Interaction, userid: str,
     class WarnView(View):
 
         def __init__(self, userid: str, reason: str, username: str,
-                     interaction_user: discord.User):
+                     interaction_user: discord.User | discord.Member):
             super().__init__(timeout=60)
             self.userid = userid
             self.reason = reason
@@ -1931,7 +1932,7 @@ async def warn_command(interaction: discord.Interaction, userid: str,
             self.interaction_user = interaction_user
 
         @discord.ui.button(label="Confirm Warn",
-                           style=discord.ButtonStyle.warning,
+                           style=discord.ButtonStyle.secondary,
                            emoji="⚠️")
         async def confirm(self, interaction: discord.Interaction,
                           button: Button):
@@ -2763,7 +2764,7 @@ async def clearblacklist_command(interaction: discord.Interaction):
                                     color=discord.Color.orange())
         else:
             class ClearBlacklistView(View):
-                def __init__(self, count: int, interaction_user: discord.User):
+                def __init__(self, count: int, interaction_user: discord.User | discord.Member):
                     super().__init__(timeout=60)
                     self.count = count
                     self.interaction_user = interaction_user
