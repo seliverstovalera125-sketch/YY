@@ -1081,12 +1081,11 @@ def check_api():
 @bot.event
 async def on_ready():
     await tree.sync()
-    logger.info(f"Bot ready: {bot.user}")
+    logger.info(f"Kynx SS 10 ready: {bot.user}")
     await bot.change_presence(activity=discord.Activity(
-        type=discord.ActivityType.watching, name="for /help"))
+        type=discord.ActivityType.watching, name="Server Moderation"))
 
 
-# ===== COMMANDS =====
 # ===== KICK COMMANDS =====
 @tree.command(name="kick", description="Kick a player from the Roblox server")
 @app_commands.describe(userid="Roblox UserID", reason="Kick reason")
@@ -1467,21 +1466,20 @@ async def cleanotes_command(interaction: discord.Interaction, userid: str):
 
 
 # ===== PING COMMANDS =====
-
-
 @tree.command(name="ping", description="Check bot status")
 async def ping_command(interaction: discord.Interaction):
     latency = round(bot.latency * 1000, 2)
     api_status = check_api()
 
-    embed = ModerationEmbed(title="Ping",
+    embed = ModerationEmbed(title="Kynx SS 10 Status",
                             description="Bot status check",
                             color=discord.Color.blue())
 
     embed.add_field(name="Bot Latency", value=f"{latency}ms", inline=True)
     embed.add_field(name="API Status",
-                    value="Online" if api_status else "Offline",
+                    value="✅ Online" if api_status else "❌ Offline",
                     inline=True)
+    embed.add_field(name="Version", value="SS 10", inline=True)
 
     await interaction.response.send_message(embed=embed)
 
@@ -1555,7 +1553,7 @@ async def ban_command(interaction: discord.Interaction,
                                                            ban_type=ban_type))
 
 
-# ===== CHACK COMMANDS =====
+# ===== CHECK COMMANDS =====
 @tree.command(name="check", description="Check server status")
 async def check_command(interaction: discord.Interaction):
     try:
@@ -2031,7 +2029,7 @@ async def stats_command(interaction: discord.Interaction):
                     normal_bans += 1
 
         embed = ModerationEmbed(title="Server Statistics",
-                                description="Current server statistics",
+                                description="Kynx SS 10 - Current server statistics",
                                 color=discord.Color.purple())
 
         embed.add_field(name="Online Players",
@@ -2042,8 +2040,8 @@ async def stats_command(interaction: discord.Interaction):
                         value=str(normal_bans),
                         inline=True)
         embed.add_field(name="PC Bans", value=str(pc_bans), inline=True)
-        embed.add_field(name="API Status", value="Online", inline=True)
-        embed.add_field(name="Bot Status", value="Online", inline=True)
+        embed.add_field(name="API Status", value="✅ Online", inline=True)
+        embed.add_field(name="Version", value="SS 10", inline=True)
 
         await interaction.followup.send(embed=embed)
 
@@ -2054,6 +2052,7 @@ async def stats_command(interaction: discord.Interaction):
         await interaction.followup.send(embed=embed)
 
 
+# ===== ANNOUNCE COMMANDS =====
 @tree.command(name="announce", description="Send announcement to server")
 @app_commands.describe(message="Announcement message")
 async def announce_command(interaction: discord.Interaction, message: str):
@@ -2138,7 +2137,7 @@ async def find_command(interaction: discord.Interaction, username: str):
         await interaction.followup.send(embed=embed)
 
 
-# ===== L00KUP COMMANDS =====
+# ===== LOOKUP COMMANDS =====
 @tree.command(name="lookup", description="Check player moderation history")
 @app_commands.describe(userid="Roblox UserID")
 async def lookup_command(interaction: discord.Interaction, userid: str):
@@ -2512,8 +2511,6 @@ async def unbanasync_command(interaction: discord.Interaction, userid: str):
 
 
 # ===== MUTE COMMANDS =====
-
-
 @tree.command(name="mute", description="Mute a player")
 @app_commands.describe(userid="Roblox UserID",
                        duration="Duration in minutes (e.g. 10, 60, 1440)",
@@ -2587,11 +2584,248 @@ async def umute_command(interaction: discord.Interaction, userid: str):
                                         username, interaction.user))
 
 
+# ===== BLACKLIST COMMANDS =====
+@tree.command(name="blacklist", description="Add asset to blacklist")
+@app_commands.describe(asset_id="Asset ID to blacklist")
+async def blacklist_command(interaction: discord.Interaction, asset_id: str):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("No permission.",
+                                                ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    if not asset_id.isdigit():
+        embed = ModerationEmbed(title="Invalid ID",
+                                description="Asset ID must be numbers only.",
+                                color=discord.Color.red())
+        await interaction.followup.send(embed=embed)
+        return
+
+    try:
+        if asset_blacklist.is_blacklisted(asset_id):
+            embed = ModerationEmbed(title="Already Blacklisted",
+                                    description=f"Asset `{asset_id}` is already blacklisted.",
+                                    color=discord.Color.orange())
+        else:
+            if asset_blacklist.add_asset(asset_id):
+                embed = ModerationEmbed(title="✅ Asset Blacklisted",
+                                        description=f"Asset `{asset_id}` has been added to blacklist.",
+                                        color=discord.Color.green())
+            else:
+                embed = ModerationEmbed(title="❌ Failed",
+                                        description=f"Failed to blacklist asset `{asset_id}`.",
+                                        color=discord.Color.red())
+    except Exception as e:
+        embed = ModerationEmbed(title="❌ Error",
+                                description=f"Error: {str(e)}",
+                                color=discord.Color.red())
+
+    await interaction.followup.send(embed=embed)
+
+
+# ===== UNBLACKLIST COMMANDS =====
+@tree.command(name="unblacklist", description="Remove asset from blacklist")
+@app_commands.describe(asset_id="Asset ID to remove from blacklist")
+async def unblacklist_command(interaction: discord.Interaction, asset_id: str):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("No permission.",
+                                                ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    if not asset_id.isdigit():
+        embed = ModerationEmbed(title="Invalid ID",
+                                description="Asset ID must be numbers only.",
+                                color=discord.Color.red())
+        await interaction.followup.send(embed=embed)
+        return
+
+    try:
+        if not asset_blacklist.is_blacklisted(asset_id):
+            embed = ModerationEmbed(title="Not Blacklisted",
+                                    description=f"Asset `{asset_id}` is not in blacklist.",
+                                    color=discord.Color.orange())
+        else:
+            if asset_blacklist.remove_asset(asset_id):
+                embed = ModerationEmbed(title="✅ Asset Removed",
+                                        description=f"Asset `{asset_id}` has been removed from blacklist.",
+                                        color=discord.Color.green())
+            else:
+                embed = ModerationEmbed(title="❌ Failed",
+                                        description=f"Failed to remove asset `{asset_id}`.",
+                                        color=discord.Color.red())
+    except Exception as e:
+        embed = ModerationEmbed(title="❌ Error",
+                                description=f"Error: {str(e)}",
+                                color=discord.Color.red())
+
+    await interaction.followup.send(embed=embed)
+
+
+# ===== VIEWBLACKLIST COMMANDS =====
+@tree.command(name="viewblacklist", description="View all blacklisted assets")
+async def viewblacklist_command(interaction: discord.Interaction):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("No permission.",
+                                                ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    try:
+        assets = asset_blacklist.get_all_assets()
+
+        embed = ModerationEmbed(title="Asset Blacklist",
+                                description="List of blacklisted assets",
+                                color=discord.Color.dark_purple())
+
+        if assets:
+            embed.add_field(name="Total Assets",
+                            value=str(len(assets)),
+                            inline=True)
+
+            # Show first 10 assets
+            asset_list = "\n".join([f"`{asset}`" for asset in assets[:10]])
+            embed.add_field(name="Assets",
+                            value=asset_list if asset_list else "None",
+                            inline=False)
+
+            if len(assets) > 10:
+                embed.set_footer(text=f"And {len(assets)-10} more assets...")
+        else:
+            embed.add_field(name="Blacklist",
+                            value="No assets are currently blacklisted.",
+                            inline=False)
+
+        await interaction.followup.send(embed=embed)
+    except Exception as e:
+        embed = ModerationEmbed(title="❌ Error",
+                                description=f"Error: {str(e)}",
+                                color=discord.Color.red())
+        await interaction.followup.send(embed=embed)
+
+
+# ===== CHECKASSET COMMANDS =====
+@tree.command(name="checkasset", description="Check if asset is blacklisted")
+@app_commands.describe(asset_id="Asset ID to check")
+async def checkasset_command(interaction: discord.Interaction, asset_id: str):
+    if not is_authorized(interaction):
+        await interaction.response.send_message("No permission.",
+                                                ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    if not asset_id.isdigit():
+        embed = ModerationEmbed(title="Invalid ID",
+                                description="Asset ID must be numbers only.",
+                                color=discord.Color.red())
+        await interaction.followup.send(embed=embed)
+        return
+
+    try:
+        is_blacklisted = asset_blacklist.is_blacklisted(asset_id)
+
+        if is_blacklisted:
+            embed = ModerationEmbed(title="🔴 Blacklisted",
+                                    description=f"Asset `{asset_id}` is blacklisted.",
+                                    color=discord.Color.red())
+        else:
+            embed = ModerationEmbed(title="🟢 Allowed",
+                                    description=f"Asset `{asset_id}` is not blacklisted.",
+                                    color=discord.Color.green())
+    except Exception as e:
+        embed = ModerationEmbed(title="❌ Error",
+                                description=f"Error: {str(e)}",
+                                color=discord.Color.red())
+
+    await interaction.followup.send(embed=embed)
+
+
+# ===== CLEARBLACKLIST COMMANDS =====
+@tree.command(name="clearblacklist", description="Clear all blacklisted assets (Admin)")
+async def clearblacklist_command(interaction: discord.Interaction):
+    if not is_admin(interaction):
+        await interaction.response.send_message("Admin only.", ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    try:
+        assets = asset_blacklist.get_all_assets()
+        count = len(assets)
+
+        if count == 0:
+            embed = ModerationEmbed(title="Blacklist Empty",
+                                    description="No assets to clear.",
+                                    color=discord.Color.orange())
+        else:
+            class ClearBlacklistView(View):
+                def __init__(self, count: int, interaction_user: discord.User):
+                    super().__init__(timeout=60)
+                    self.count = count
+                    self.interaction_user = interaction_user
+
+                @discord.ui.button(label="Confirm Clear",
+                                   style=discord.ButtonStyle.danger,
+                                   emoji="🗑️")
+                async def confirm(self, interaction: discord.Interaction, button: Button):
+                    if interaction.user != self.interaction_user:
+                        await interaction.response.send_message("Not your session.", ephemeral=True)
+                        return
+
+                    button.disabled = True
+                    button.label = "Clearing..."
+                    await interaction.response.edit_message(view=self)
+
+                    try:
+                        # This would need API support to clear all assets
+                        # For now, we'll show a message
+                        embed = ModerationEmbed(
+                            title="⚠️ Feature Not Implemented",
+                            description=f"This feature requires API support to clear all {self.count} assets.",
+                            color=discord.Color.orange())
+                        await interaction.edit_original_response(embed=embed, view=None)
+                    except Exception as e:
+                        await interaction.edit_original_response(
+                            content=f"Error: {str(e)}", view=None)
+
+                @discord.ui.button(label="Cancel",
+                                   style=discord.ButtonStyle.secondary,
+                                   emoji="✖️")
+                async def cancel(self, interaction: discord.Interaction, button: Button):
+                    if interaction.user != self.interaction_user:
+                        await interaction.response.send_message("Not your session.", ephemeral=True)
+                        return
+
+                    await interaction.response.edit_message(content="Cancelled.", embed=None, view=None)
+
+            embed = ModerationEmbed(
+                title="Confirm Clear Blacklist",
+                description=f"This will clear ALL {count} blacklisted assets.",
+                color=discord.Color.red(),
+                moderator=interaction.user)
+            embed.add_field(name="Warning",
+                            value="This action cannot be undone!",
+                            inline=False)
+
+            await interaction.followup.send(embed=embed,
+                                            view=ClearBlacklistView(count, interaction.user))
+
+    except Exception as e:
+        embed = ModerationEmbed(title="❌ Error",
+                                description=f"Error: {str(e)}",
+                                color=discord.Color.red())
+        await interaction.followup.send(embed=embed)
+
+
 # ===== HELP COMMANDS =====
-@tree.command(name="help", description="Show commands")
+@tree.command(name="help", description="Show all commands")
 async def help_command(interaction: discord.Interaction):
     embed = ModerationEmbed(
-        title="Kynx Commands Help",
+        title="Kynx SS 10 Commands Help",
         description="Game server moderation bot - Full command list",
         color=discord.Color.blue())
 
@@ -2650,14 +2884,14 @@ async def help_command(interaction: discord.Interaction):
 
     embed.set_footer(
         text=
-        f"Total commands: 32 • Version 6.0 • Auto-save Banlist: ✅ • Asset Blacklist: ✅"
+        f"Kynx SS 10 • Total commands: 37 • Auto-save Banlist: ✅ • Asset Blacklist: ✅ • PC Ban System: ✅"
     )
     await interaction.response.send_message(embed=embed)
 
 
 @tree.command(name="cmds", description="Show all commands (short version)")
 async def cmds_command(interaction: discord.Interaction):
-    commands_list = """**Quick Commands List:**
+    commands_list = """**Kynx SS 10 - Quick Commands List:**
 
 **Player Management:**
 `/mute [id] [duration] [reason]` - Mute player
@@ -2678,11 +2912,11 @@ async def cmds_command(interaction: discord.Interaction):
 **Utility:**
 `/ping`, `/check`"""
 
-    embed = ModerationEmbed(title="Quick Commands",
+    embed = ModerationEmbed(title="Kynx SS 10 - Quick Commands",
                             description=commands_list,
                             color=discord.Color.blue())
     embed.set_footer(
-        text="Use /help for detailed information • Total: 32 commands")
+        text="Use /help for detailed information • Total: 37 commands • Version: SS 10")
     await interaction.response.send_message(embed=embed)
 
 
@@ -2699,13 +2933,11 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_ready():
-    logger.info(f"Bot ready: {bot.user}")
+    logger.info(f"Kynx SS 10 ready: {bot.user}")
     try:
-        # Syncing all commands to all guilds the bot is in
         synced = await tree.sync()
         logger.info(f"Synced {len(synced)} global commands")
 
-        # Log command names for verification
         command_names = [cmd.name for cmd in synced]
         logger.info(f"Synced commands: {', '.join(command_names)}")
     except Exception as e:
@@ -2714,8 +2946,9 @@ async def on_ready():
 
 def run():
     if TOKEN:
-        logger.info("Starting Kynx bot...")
-        logger.info(f"Total commands loaded: 34")
+        logger.info("Starting Kynx SS 10 bot...")
+        logger.info(f"Total commands loaded: 37")
+        logger.info("Version: SS 10")
         logger.info("Mute/Umute commands: ✅ Fixed & Restored")
         logger.info("PC Ban system: ✅ Enabled")
         logger.info(
@@ -2723,7 +2956,7 @@ def run():
         logger.info("Asset Blacklist: ✅ Integrated with API")
         bot.run(TOKEN)
     else:
-        logger.error("No token found.")
+        logger.error("No token found in .env file")
 
 
 if __name__ == "__main__":
