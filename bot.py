@@ -4,6 +4,7 @@ import requests
 import logging
 import asyncio
 import json
+from typing import Optional
 from discord.ext import commands
 from discord import app_commands
 from discord.ui import View, Button
@@ -1795,103 +1796,36 @@ async def players_command(interaction: discord.Interaction):
     await interaction.response.defer()
 
     try:
-        players = []
+        res = requests.get(f"{API_URL}/get_players", timeout=10)
+        res.raise_for_status()
+        data = res.json()
+        count = data.get('count', 0)
+        players = data.get('players', [])
 
-        endpoints_to_try = [
-            f"{API_URL}/players",
-            f"{API_URL}/players/list",
-            f"{API_URL}/get_players_detailed",
-            f"{API_URL}/get_players",
-        ]
+        embed = ModerationEmbed(title="🎮 Online Players",
+                                description=f"Total online: **{count}**",
+                                color=discord.Color.blue())
 
-        for endpoint in endpoints_to_try:
-            try:
-                response = requests.get(endpoint, timeout=5)
-                if response.status_code == 200:
-                    data = response.json()
-                    print(
-                        f"{endpoint} returned: {type(data)} - {str(data)[:100]}"
-                    )
-
-                    if isinstance(data, list):
-                        players = data
-                        break
-                    elif isinstance(data, dict):
-                        players_key = next((key for key in [
-                            'players', 'Players', 'playerlist', 'PlayerList',
-                            'data', 'Data'
-                        ] if key in data), None)
-                        if players_key:
-                            players = data[players_key]
-                            break
-                        elif 'count' in data or 'online' in data:
-                            player_count = data.get('count',
-                                                    data.get('online', 0))
-                            players = [{
-                                "username": f"Player {i+1}",
-                                "userid": "Unknown",
-                                "playtime": "0m"
-                            } for i in range(player_count)]
-                            break
-            except:
-                continue
-
-        embed = ModerationEmbed(
-            title="Online Players",
-            description=f"**Total online:** {len(players)}",
-            color=discord.Color.green())
-
-        if players and len(players) > 0:
-            for i, player in enumerate(players[:10]):
-                if isinstance(player,
-                              dict) and 'username' in player and player[
-                                  'username'].startswith('Player '):
-                    embed.add_field(
-                        name=player['username'],
-                        value=
-                        f"ID: `{player.get('userid', 'Unknown')}`\nPlaytime: {player.get('playtime', '0m')}",
-                        inline=True)
-                else:
-                    username = "Unknown Player"
-                    userid = "Unknown"
-                    playtime = "0m"
-
-                    if isinstance(player, dict):
-                        username = player.get(
-                            'name',
-                            player.get('username',
-                                       player.get('Name', f'Player {i+1}')))
-                        userid = player.get(
-                            'id',
-                            player.get(
-                                'userid',
-                                player.get('steamId',
-                                           player.get('steamid', 'Unknown'))))
-                        playtime = player.get(
-                            'playtime',
-                            player.get('time', player.get('duration', '0m')))
-                    elif isinstance(player, str):
-                        username = player
-
-                    embed.add_field(
-                        name=username,
-                        value=f"ID: `{userid}`\nPlaytime: {playtime}",
-                        inline=True)
-
-            if len(players) > 10:
-                embed.set_footer(text=f"And {len(players)-10} more players...")
+        if not players:
+            embed.description = (embed.description or "") + "\n\n*No player details available.*"
         else:
-            embed.description = "**No players online.**"
-            embed.color = discord.Color.light_grey()
+            for i, p in enumerate(players[:25], 1):
+                userid = p.get('userid', 'Unknown')
+                username = p.get('username', 'Unknown')
+                display = p.get('display', username)
+                playtime = p.get('playtime', 0)
 
-        await interaction.followup.send(embed=embed)
+                user_display = f"{username} (@{display})" if display != username else username
+                embed.add_field(
+                    name=f"{i}. {user_display}",
+                    value=f"ID: `{userid}`\nPlaytime: `{playtime}m`",
+                    inline=True)
+
+        await interaction.edit_original_response(embed=embed)
 
     except Exception as e:
-        embed = ModerationEmbed(
-            title="Error",
-            description=f"Cannot get player list: {str(e)}",
-            color=discord.Color.red())
-        await interaction.followup.send(embed=embed)
+        logger.error(f"Failed to fetch player list: {str(e)}")
+        await interaction.edit_original_response(content="❌ Failed to fetch player list.")
 
 
 # ===== WARN COMMANDS =====
@@ -2826,21 +2760,27 @@ async def clearblacklist_command(interaction: discord.Interaction):
 # ===== SETTINGS COMMANDS =====
 
 @tree.command(name="settings", description="Manage system settings")
-@app_commands.describe(onjoin="Enable/Disable on-join checks", onlog="Enable/Disable logging", banasync="Enable/Disable anti-cheat auto-ban")
+@app_commands.describe(onjoin="Enable/Disable on-join checks (True/False)", onlog="Enable/Disable logging (True/False)", banasync="Enable/Disable anti-cheat auto-ban (True/False)")
 async def settings_command(interaction: discord.Interaction,
-                           onjoin: bool = None,
-                           onlog: bool = None,
-                           banasync: bool = None):
-    # Ensure types are correct for app_commands
-    # onjoin, onlog, and banasync will be passed as boolean if provided, or None
+                           onjoin: Optional[str] = None,
+                           onlog: Optional[str] = None,
+                           banasync: Optional[str] = None):
+    # Map string inputs to booleans for the settings command
+    def to_bool(val):
+        if val is None: return None
+        return val.lower() in ['true', 'yes', '1', 'on']
+
+    onjoin_bool = to_bool(onjoin)
+    onlog_bool = to_bool(onlog)
+    banasync_bool = to_bool(banasync)
     if not is_admin(interaction):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True)
         return
 
     update_data = {}
-    if onjoin is not None: update_data["onjoin"] = onjoin
-    if onlog is not None: update_data["onlog"] = onlog
-    if banasync is not None: update_data["banasync"] = banasync
+    if onjoin_bool is not None: update_data["onjoin"] = onjoin_bool
+    if onlog_bool is not None: update_data["onlog"] = onlog_bool
+    if banasync_bool is not None: update_data["banasync"] = banasync_bool
 
     try:
         if update_data:
