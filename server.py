@@ -10,6 +10,13 @@ blocked_hwids = set()
 player_hwids = {}  # userid -> hwid
 hwid_to_users = {} # hwid -> set(userids)
 
+# Settings
+settings = {
+    "onjoin": True,
+    "onlog": True,
+    "banasync": True
+}
+
 
 @app.route("/")
 def index():
@@ -203,6 +210,59 @@ def get_players_by_hwid(hwid):
 @app.route("/check_hwid/<string:hwid>", methods=["GET"])
 def check_hwid(hwid):
     return jsonify({"blocked": str(hwid) in blocked_hwids})
+
+
+# === ANTI-CHEAT & UTILITY ===
+
+@app.route("/report_anti", methods=["POST"])
+def report_anti():
+    data = request.json
+    print(f"⚠️ Anti-Cheat Report: {data}")
+    # Logic for auto-ban if needed
+    if settings.get("banasync") and data.get("severity") == "high":
+        userid = data.get("userid")
+        if userid:
+            banned_user_ids.add(int(userid))
+            print(f"⚡ Auto-Banned via Anti-Cheat: {userid}")
+    return jsonify({"status": "received"})
+
+@app.route("/client_fix", methods=["POST"])
+def client_fix():
+    data = request.json
+    fix_type = data.get("type")
+    print(f"🛠️ Client Fix Requested: {fix_type}")
+    commands.append({"command": "client_fix", "type": fix_type})
+    return jsonify({"status": "sent"})
+
+# === SETTINGS ===
+
+@app.route("/get_settings", methods=["GET"])
+def get_settings():
+    return jsonify(settings)
+
+@app.route("/update_settings", methods=["POST"])
+def update_settings():
+    data = request.json
+    for key in settings:
+        if key in data:
+            settings[key] = data[key]
+    return jsonify({"status": "updated", "settings": settings})
+
+
+# === BANLIST JSON ===
+
+@app.route("/bans/banlist.json")
+def get_banlist_json():
+    ban_list = []
+    for uid in banned_user_ids:
+        ban_list.append({
+            "userid": str(uid),
+            "username": "Unknown",
+            "reason": "Banned via System",
+            "executor": "System",
+            "timestamp": datetime.now().timestamp()
+        })
+    return jsonify(ban_list)
 
 
 def run():
