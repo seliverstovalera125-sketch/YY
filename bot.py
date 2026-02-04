@@ -2831,6 +2831,8 @@ async def settings_command(interaction: discord.Interaction,
                            onjoin: bool = None,
                            onlog: bool = None,
                            banasync: bool = None):
+    # Ensure types are correct for app_commands
+    # onjoin, onlog, and banasync will be passed as boolean if provided, or None
     if not is_admin(interaction):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True)
         return

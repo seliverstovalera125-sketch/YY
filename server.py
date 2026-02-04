@@ -50,18 +50,21 @@ def clear_commands():
     return jsonify({"status": "cleared"})
 
 
+player_data = [] # List of dicts: {"userid": str, "username": str, "display": str, "playtime": int}
+
 @app.route("/update_players", methods=["POST"])
 def update_players():
-    global player_count
+    global player_count, player_data
     data = request.json
     player_count = data.get("count", 0)
-    print(f"Players: {player_count}")
+    player_data = data.get("players", [])
+    print(f"Players online: {player_count}")
     return jsonify({"status": "updated"})
 
 
 @app.route("/get_players")
 def get_players():
-    return jsonify({"count": player_count})
+    return jsonify({"count": player_count, "players": player_data})
 
 
 @app.route("/BanAsync", methods=["POST"])
