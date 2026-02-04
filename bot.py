@@ -2827,7 +2827,10 @@ async def clearblacklist_command(interaction: discord.Interaction):
 
 @tree.command(name="settings", description="Manage system settings")
 @app_commands.describe(onjoin="Enable/Disable on-join checks", onlog="Enable/Disable logging", banasync="Enable/Disable anti-cheat auto-ban")
-async def settings_command(interaction: discord.Interaction, onjoin: bool = None, onlog: bool = None, banasync: bool = None):
+async def settings_command(interaction: discord.Interaction,
+                           onjoin: bool = None,
+                           onlog: bool = None,
+                           banasync: bool = None):
     if not is_admin(interaction):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True)
         return
@@ -2929,8 +2932,8 @@ async def help_command(interaction: discord.Interaction):
                     inline=False)
 
     embed.add_field(name="**System & Client**",
-                    value="""`/settings` - System toggles
-`/client_fix` - Reset/Camera fix""",
+                    value="""`/settings [onjoin] [onlog] [banasync]` - System toggles
+`/client_fix [type]` - Reset/Camera fix""",
                     inline=False)
 
     embed.add_field(name="**Utility**",
@@ -2940,7 +2943,7 @@ async def help_command(interaction: discord.Interaction):
 
     embed.set_footer(
         text=
-        f"Kynx SS 10 • Total commands: 37 • Auto-save Banlist: ✅ • Asset Blacklist: ✅ • PC Ban System: ✅"
+        f"Kynx SS 10 • Total commands: 37 • GUI Refit: ✅ • Mobile Support: ✅ • Anti-Cheat: ✅"
     )
     await interaction.response.send_message(embed=embed)
 
@@ -2964,6 +2967,9 @@ async def cmds_command(interaction: discord.Interaction):
 
 **Admin:**
 `/restart`, `/shutdown`, `/announce`, `/broadcast`, `/announcement`, `/logs`
+
+**System & Client:**
+`/settings`, `/client_fix`
 
 **Utility:**
 `/ping`, `/check`"""
