@@ -255,18 +255,54 @@ def update_settings():
 
 # === BANLIST JSON ===
 
-@app.route("/bans/banlist.json")
-def get_banlist_json():
-    ban_list = []
+@app.route("/bans/banlist.html")
+def get_banlist_html():
+    ban_rows = ""
     for uid in banned_user_ids:
-        ban_list.append({
-            "userid": str(uid),
-            "username": "Unknown",
-            "reason": "Banned via System",
-            "executor": "System",
-            "timestamp": datetime.now().timestamp()
-        })
-    return jsonify(ban_list)
+        ban_rows += f"""
+        <tr>
+            <td>{uid}</td>
+            <td>Unknown</td>
+            <td>Banned via System</td>
+            <td>System</td>
+            <td>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</td>
+        </tr>
+        """
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Ban List</title>
+        <style>
+            body {{ font-family: sans-serif; margin: 20px; background: #f4f4f9; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }}
+            th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+            th {{ background-color: #ff4d4d; color: white; }}
+            tr:hover {{ background-color: #f1f1f1; }}
+            h1 {{ color: #333; }}
+        </style>
+    </head>
+    <body>
+        <h1>Active Ban List</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Username</th>
+                    <th>Reason</th>
+                    <th>Executor</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {ban_rows if ban_rows else '<tr><td colspan="5" style="text-align:center;">No active bans</td></tr>'}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    """
+    return html
 
 
 def run():
