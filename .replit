@@ -21,6 +21,7 @@ args = "Roblox Moderation System"
 [[workflows.workflow]]
 name = "Roblox Moderation System"
 author = "agent"
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
