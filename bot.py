@@ -1469,6 +1469,7 @@ async def cleanotes_command(interaction: discord.Interaction, userid: str):
 
 
 # ===== PING COMMANDS =====
+    # ===== PING COMMANDS =====
     @tree.command(name="ping", description="Check bot status")
     async def ping_command(interaction: discord.Interaction):
         latency = round(bot.latency * 1000, 2)
@@ -1482,9 +1483,9 @@ async def cleanotes_command(interaction: discord.Interaction, userid: str):
         embed.add_field(name="API Status",
                         value="✅ Online" if api_status else "❌ Offline",
                         inline=True)
+        embed.add_field(name="Version", value="test", inline=True)
 
         await interaction.response.send_message(embed=embed)
-
 # ===== BAN COMMANDS =====
 @tree.command(name="ban", description="Ban a player")
 @app_commands.describe(
