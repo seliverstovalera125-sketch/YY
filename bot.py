@@ -29,6 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 intents = discord.Intents.default()
+# intents.message_content = True # Disabled to avoid privileged intent error
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
