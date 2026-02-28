@@ -29,7 +29,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 intents = discord.Intents.default()
-# intents.message_content = True # Disabled to avoid privileged intent error
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
@@ -77,24 +76,24 @@ class AssetBlacklist:
 asset_blacklist = AssetBlacklist()
 
 
-class ModerationEmbed(discord.Embed):
+class ZeroTwoEmbed(discord.Embed):
+    """Zero Two themed embed for all bot responses"""
 
-    def __init__(self,
-                 title,
-                 description,
-                 color=discord.Color.blue(),
-                 target_user=None,
-                 moderator=None):
-        super().__init__(title=title,
-                         description=description,
-                         color=color,
-                         timestamp=datetime.utcnow())
+    def __init__(self, title, description, color=0xff69b4, target_user=None, moderator=None):
+        super().__init__(
+            title=f" {title} ",
+            description=f"```🌸 {description} 🌸```",
+            color=color,
+            timestamp=datetime.utcnow()
+        )
+
         if target_user:
-            self.add_field(name="Target", value=target_user, inline=True)
+            self.add_field(name="🎯 Target", value=target_user, inline=True)
         if moderator:
-            self.set_footer(text=f"Moderator: {moderator}",
-                            icon_url=moderator.display_avatar.url if hasattr(
-                                moderator, 'display_avatar') else None)
+            moderator_name = moderator.display_name if hasattr(moderator, 'display_name') else str(moderator)
+            self.add_field(name="⚡ Moderator", value=moderator_name, inline=True)
+
+        self.set_footer(text="DARLING • Code:002 •")
 
 
 class ConfirmActionView(View):
@@ -118,13 +117,12 @@ class ConfirmActionView(View):
         self.is_admin = is_admin
         self.ban_type = ban_type
 
-    @discord.ui.button(label="Confirm",
+    @discord.ui.button(label="Confirm DARLING",
                        style=discord.ButtonStyle.danger,
-                       emoji="⚡")
+                       emoji="💕")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(
-                " This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session, DARLING~", ephemeral=True)
             return
 
         button.disabled = True
@@ -167,8 +165,7 @@ class ConfirmActionView(View):
                                      json=data,
                                      timeout=10)
             response.raise_for_status()
-            logger.info(
-                f"API Response: {response.status_code} - {response.text}")
+            logger.info(f"API Response: {response.status_code} - {response.text}")
 
             if self.action == "ban":
                 if self.duration == -1:
@@ -181,98 +178,92 @@ class ConfirmActionView(View):
                 else:
                     ban_type_text = ""
 
-                embed = ModerationEmbed(
+                embed = ZeroTwoEmbed(
                     title=f"✅ {ban_type_text}Ban Executed",
-                    description=
-                    f"**{self.username}** has been {ban_type_text}banned {duration_text}.",
-                    color=discord.Color.green(),
+                    description=f"**{self.username}** has been {ban_type_text}banned {duration_text}.",
+                    color=0xff69b4,
                     target_user=f"{self.username} ({self.userid})",
                     moderator=interaction.user)
-                embed.add_field(name="Reason", value=self.reason, inline=False)
+                embed.add_field(name="💢 Reason", value=self.reason, inline=False)
                 if self.ban_type == "pc":
-                    embed.add_field(name="Type",
-                                    value="PC Ban (Device-based)",
-                                    inline=True)
+                    embed.add_field(name="💻 Type", value="PC Ban (Device-based)", inline=True)
+
             elif self.action == "pcban":
-                embed = ModerationEmbed(
+                embed = ZeroTwoEmbed(
                     title="✅ PC Ban Executed",
-                    description=
-                    f"**{self.username}** has been PC banned (permanent).",
-                    color=discord.Color.red(),
+                    description=f"**{self.username}** has been PC banned (permanent).",
+                    color=0x8b0000,
                     target_user=f"{self.username} ({self.userid})",
                     moderator=interaction.user)
-                embed.add_field(name="Reason", value=self.reason, inline=False)
-                embed.add_field(name="Type",
-                                value="PC Ban (Device-based)",
-                                inline=True)
-                embed.add_field(name="Status", value="Permanent", inline=True)
+                embed.add_field(name="💢 Reason", value=self.reason, inline=False)
+                embed.add_field(name="💻 Type", value="PC Ban (Device-based)", inline=True)
+                embed.add_field(name="⏰ Status", value="Permanent", inline=True)
+
             elif self.action == "kick":
-                embed = ModerationEmbed(
+                embed = ZeroTwoEmbed(
                     title="✅ Kick Executed",
                     description=f"**{self.username}** has been kicked.",
-                    color=discord.Color.green(),
+                    color=0xff1493,
                     target_user=f"{self.username} ({self.userid})",
                     moderator=interaction.user)
-                embed.add_field(name="Reason", value=self.reason, inline=False)
+                embed.add_field(name="💢 Reason", value=self.reason, inline=False)
+
             elif self.action == "restart":
-                embed = ModerationEmbed(
+                embed = ZeroTwoEmbed(
                     title="🔄 Server Restarting",
                     description="Server restart command sent.",
-                    color=discord.Color.orange(),
-                    moderator=interaction.user)
-            elif self.action == "shutdown":
-                embed = ModerationEmbed(
-                    title="🛑 Server Shutdown",
-                    description="Server shutdown command sent.",
-                    color=discord.Color.red(),
-                    moderator=interaction.user)
-            elif self.action == "mute":
-                embed = ModerationEmbed(
-                    title="✅ Mute Executed",
-                    description=f"**{self.username}** has been muted for {self.duration} minutes.",
-                    color=discord.Color.orange(),
-                    target_user=f"{self.username} ({self.userid})",
-                    moderator=interaction.user)
-                embed.add_field(name="Reason", value=self.reason, inline=False)
-            elif self.action == "umute":
-                embed = ModerationEmbed(
-                    title="✅ Unmute Executed",
-                    description=f"**{self.username}** has been unmuted.",
-                    color=discord.Color.green(),
-                    target_user=f"{self.username} ({self.userid})",
-                    moderator=interaction.user)
-            else:
-                embed = ModerationEmbed(
-                    title="✅ Action Completed",
-                    description=f"Command executed: {self.action}",
-                    color=discord.Color.green(),
+                    color=0xffa500,
                     moderator=interaction.user)
 
-            await interaction.edit_original_response(content=None,
-                                                     embed=embed,
-                                                     view=None)
+            elif self.action == "shutdown":
+                embed = ZeroTwoEmbed(
+                    title="🛑 Server Shutdown",
+                    description="Server shutdown command sent.",
+                    color=0x8b0000,
+                    moderator=interaction.user)
+
+            elif self.action == "mute":
+                embed = ZeroTwoEmbed(
+                    title="✅ Mute Executed",
+                    description=f"**{self.username}** has been muted for {self.duration} minutes.",
+                    color=0xff69b4,
+                    target_user=f"{self.username} ({self.userid})",
+                    moderator=interaction.user)
+                embed.add_field(name="💢 Reason", value=self.reason, inline=False)
+
+            elif self.action == "umute":
+                embed = ZeroTwoEmbed(
+                    title="✅ Unmute Executed",
+                    description=f"**{self.username}** has been unmuted.",
+                    color=0x00ff00,
+                    target_user=f"{self.username} ({self.userid})",
+                    moderator=interaction.user)
+
+            else:
+                embed = ZeroTwoEmbed(
+                    title="✅ Action Completed",
+                    description=f"Command executed: {self.action}",
+                    color=0xff69b4,
+                    moderator=interaction.user)
+
+            await interaction.edit_original_response(content=None, embed=embed, view=None)
+
         except requests.exceptions.ConnectionError:
-            await interaction.edit_original_response(
-                content="Failed to connect to game server.", view=None)
+            await interaction.edit_original_response(content="Failed to connect to game server, DARLING~", view=None)
         except requests.exceptions.Timeout:
-            await interaction.edit_original_response(content="Server timeout.",
-                                                     view=None)
+            await interaction.edit_original_response(content="Server timeout... Zero Two is waiting~", view=None)
         except Exception as e:
-            await interaction.edit_original_response(
-                content=f"Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel",
                        style=discord.ButtonStyle.secondary,
                        emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(
-                "This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session, DARLING~", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="Action cancelled.",
-                                                embed=None,
-                                                view=None)
+        await interaction.response.edit_message(content="Action cancelled.", embed=None, view=None)
 
 
 def save_banlist_to_disk(bans: list) -> str:
@@ -281,13 +272,12 @@ def save_banlist_to_disk(bans: list) -> str:
     filename = f"banlist_{timestamp}.json"
     filepath = os.path.join(BANLIST_DIR, filename)
 
-    # Save in JSON format
     data = {
         "metadata": {
             "generated": datetime.now().isoformat(),
             "total_bans": len(bans),
-            "server": "Game Server",
-            "version": "1.0"
+            "server": "Zero Two's Server",
+            "version": "Code:002"
         },
         "bans": bans
     }
@@ -295,19 +285,18 @@ def save_banlist_to_disk(bans: list) -> str:
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    # Also save in text format for readability
     txt_filename = f"banlist_{timestamp}.txt"
     txt_filepath = os.path.join(BANLIST_DIR, txt_filename)
 
     with open(txt_filepath, 'w', encoding='utf-8') as f:
         f.write("=" * 70 + "\n")
-        f.write(f"SERVER BAN LIST\n")
+        f.write("ZERO TWO'S BAN LIST \n")
         f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"Total bans: {len(bans)}\n")
         f.write("=" * 70 + "\n\n")
 
         if not bans:
-            f.write("No bans found.\n")
+            f.write("No bans found. DARLING~\n")
         else:
             for i, ban in enumerate(bans, 1):
                 userid = ban.get('userid', 'Unknown')
@@ -321,23 +310,21 @@ def save_banlist_to_disk(bans: list) -> str:
 
                 if timestamp_ban and timestamp_ban != 'Unknown':
                     try:
-                        date_str = datetime.fromtimestamp(
-                            timestamp_ban).strftime('%Y-%m-%d %H:%M')
+                        date_str = datetime.fromtimestamp(timestamp_ban).strftime('%Y-%m-%d %H:%M')
                     except:
                         date_str = str(timestamp_ban)
                 else:
                     date_str = "N/A"
 
                 duration_text = "Permanent" if duration == -1 else f"{duration} days"
-                ban_type_text = "PC Ban" if ban_type == "pc" else "Normal Ban"
+                ban_type_text = "💻 PC Ban" if ban_type == "pc" else "Normal Ban"
 
-                # Format user display for file
                 if display_name != username and display_name:
                     user_display = f"{username} (@{display_name})"
                 else:
                     user_display = username
 
-                f.write(f"#{i:3d} {ban_type_text.upper():10} {user_display}\n")
+                f.write(f"#{i:3d} {ban_type_text:12} {user_display}\n")
                 f.write(f"     ID: {userid}\n")
                 f.write(f"     Reason: {reason}\n")
                 f.write(f"     Duration: {duration_text}\n")
@@ -360,8 +347,7 @@ class BanListView(View):
         self.bans = bans
         self.page = page
         self.items_per_page = 5
-        self.total_pages = max(1, (len(bans) + self.items_per_page - 1) //
-                               self.items_per_page)
+        self.total_pages = max(1, (len(bans) + self.items_per_page - 1) // self.items_per_page)
         self.interaction_user = interaction_user
         self.saved_filename = saved_filename
 
@@ -378,15 +364,14 @@ class BanListView(View):
         start_idx = (self.page - 1) * self.items_per_page
         end_idx = min(start_idx + self.items_per_page, len(self.bans))
 
-        embed = ModerationEmbed(
-            title="🔨 Ban List",
-            description=
-            f"Total bans: {len(self.bans)}\nPage: {self.page}/{self.total_pages}",
-            color=discord.Color.dark_red())
+        embed = ZeroTwoEmbed(
+            title="🔨 Zero Two's Ban List",
+            description=f"Total bans: {len(self.bans)}\nPage: {self.page}/{self.total_pages}",
+            color=0x8b0000)
 
         if not self.bans:
-            embed.description = "No bans found."
-            embed.color = discord.Color.green()
+            embed.description = "No bans found. DARLING~"
+            embed.color = 0x00ff00
             return embed
 
         for i in range(start_idx, end_idx):
@@ -400,21 +385,17 @@ class BanListView(View):
             duration = ban.get('duration', -1)
             ban_type = ban.get('banType', 'normal')
 
-            if duration == -1:
-                duration_text = "Permanent"
-            else:
-                duration_text = f"{duration} days"
+            duration_text = "Permanent" if duration == -1 else f"{duration} days"
 
             if timestamp and timestamp != 'Unknown':
                 try:
-                    date_str = datetime.fromtimestamp(timestamp).strftime(
-                        '%Y-%m-%d %H:%M')
+                    date_str = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
                 except:
                     date_str = str(timestamp)
             else:
                 date_str = "N/A"
 
-            ban_type_icon = "💻" if ban_type == "pc" else "🔨"
+            ban_type_icon = "💻" if ban_type == "pc" else ""
             ban_type_text = "PC Ban" if ban_type == "pc" else "Normal"
 
             if display_name != username and display_name:
@@ -424,27 +405,19 @@ class BanListView(View):
 
             embed.add_field(
                 name=f"#{i+1} {ban_type_icon} {user_display}",
-                value=
-                f"ID: `{userid}`\nReason: {reason}\nDuration: {duration_text}\nType: {ban_type_text}\nBy: {executor}\nDate: {date_str}",
+                value=f"ID: `{userid}`\nReason: {reason}\nDuration: {duration_text}\nType: {ban_type_text}\nBy: {executor}\nDate: {date_str}",
                 inline=False)
 
-        # Add save information
         if self.saved_filename:
-            embed.add_field(
-                name="Auto-saved",
-                value=f"Ban list automatically saved to server files.",
-                inline=False)
-            embed.set_footer(
-                text=f"File: {os.path.basename(self.saved_filename)}")
+            embed.add_field(name="Auto-saved", value="Ban list automatically saved to server files.", inline=False)
+            embed.set_footer(text=f"File: {os.path.basename(self.saved_filename)} • Zero Two")
 
         return embed
 
     @discord.ui.button(label="◀ Previous", style=discord.ButtonStyle.secondary)
-    async def previous_page(self, interaction: discord.Interaction,
-                            button: Button):
+    async def previous_page(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
         if self.page > 1:
@@ -453,11 +426,9 @@ class BanListView(View):
             await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.secondary)
-    async def next_page(self, interaction: discord.Interaction,
-                        button: Button):
+    async def next_page(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
         if self.page < self.total_pages:
@@ -465,12 +436,10 @@ class BanListView(View):
             embed = self.get_embed()
             await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label="Refresh", style=discord.ButtonStyle.primary)
-    async def refresh_list(self, interaction: discord.Interaction,
-                           button: Button):
+    @discord.ui.button(label="Refresh", style=discord.ButtonStyle.primary, emoji="🔄")
+    async def refresh_list(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
         await interaction.response.defer()
@@ -501,11 +470,9 @@ class BanListView(View):
                     if 'display_name' not in ban:
                         if username != "Unknown" and userid != "Unknown":
                             try:
-                                roblox_data = await get_roblox_user_data(userid
-                                                                         )
+                                roblox_data = await get_roblox_user_data(userid)
                                 if roblox_data:
-                                    ban['display_name'] = roblox_data[
-                                        'display']
+                                    ban['display_name'] = roblox_data['display']
                                 else:
                                     ban['display_name'] = username
                             except:
@@ -518,9 +485,7 @@ class BanListView(View):
             saved_filepath = save_banlist_to_disk(enriched_bans)
 
             self.bans = enriched_bans
-            self.total_pages = max(
-                1, (len(enriched_bans) + self.items_per_page - 1) //
-                self.items_per_page)
+            self.total_pages = max(1, (len(enriched_bans) + self.items_per_page - 1) // self.items_per_page)
             self.page = min(self.page, self.total_pages)
             self.saved_filename = saved_filepath
 
@@ -529,20 +494,15 @@ class BanListView(View):
 
         except Exception as e:
             logger.error(f"Failed to refresh banlist: {str(e)}")
-            await interaction.followup.send("Failed to refresh.",
-                                            ephemeral=True)
+            await interaction.followup.send("Failed to refresh, DARLING~", ephemeral=True)
 
     @discord.ui.button(label="❌ Close", style=discord.ButtonStyle.danger)
-    async def close_view(self, interaction: discord.Interaction,
-                         button: Button):
+    async def close_view(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="Closed.",
-                                                embed=None,
-                                                view=None)
+        await interaction.response.edit_message(content="Closed.", embed=None, view=None)
 
 
 class UnbanView(View):
@@ -562,11 +522,9 @@ class UnbanView(View):
     @discord.ui.button(label="Confirm Unban",
                        style=discord.ButtonStyle.success,
                        emoji="✅")
-    async def confirm_unban(self, interaction: discord.Interaction,
-                            button: Button):
+    async def confirm_unban(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(" Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
         button.disabled = True
@@ -588,44 +546,34 @@ class UnbanView(View):
                 }
 
             logger.info(f"Sending unban command: {data}")
-            response = requests.post(f"{API_URL}/send_command",
-                                     json=data,
-                                     timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=data, timeout=10)
             response.raise_for_status()
-            logger.info(
-                f"Unban response: {response.status_code} - {response.text}")
+            logger.info(f"Unban response: {response.status_code} - {response.text}")
 
             ban_type_text = "PC " if self.ban_type == "pc" else ""
 
-            embed = ModerationEmbed(
+            embed = ZeroTwoEmbed(
                 title=f"✅ {ban_type_text}Unbanned",
-                description=
-                f"**{self.username}** has been {ban_type_text}unbanned.",
-                color=discord.Color.green(),
+                description=f"**{self.username}** has been {ban_type_text}unbanned.",
+                color=0x00ff00,
                 target_user=f"{self.username} ({self.userid})",
                 moderator=interaction.user)
 
-            await interaction.edit_original_response(content=None,
-                                                     embed=embed,
-                                                     view=None)
+            await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except Exception as e:
             logger.error(f"Failed to unban: {str(e)}")
-            await interaction.edit_original_response(
-                content=f"Failed to unban: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Failed to unban: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel",
                        style=discord.ButtonStyle.secondary,
                        emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="Cancelled.",
-                                                embed=None,
-                                                view=None)
+        await interaction.response.edit_message(content="Cancelled.", embed=None, view=None)
 
 
 class PCBanView(View):
@@ -644,8 +592,7 @@ class PCBanView(View):
                        emoji="💻")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(
-                "This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session, DARLING~", ephemeral=True)
             return
 
         button.disabled = True
@@ -662,52 +609,39 @@ class PCBanView(View):
             }
 
             logger.info(f"Sending PC ban command: {pcban_data}")
-            response = requests.post(f"{API_URL}/send_command",
-                                     json=pcban_data,
-                                     timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=pcban_data, timeout=10)
             response.raise_for_status()
-            logger.info(
-                f"PC ban response: {response.status_code} - {response.text}")
+            logger.info(f"PC ban response: {response.status_code} - {response.text}")
 
-            embed = ModerationEmbed(
+            embed = ZeroTwoEmbed(
                 title="PC Ban Executed",
                 description=f"**{self.username}** has been PC banned.",
-                color=discord.Color.red(),
+                color=0x8b0000,
                 target_user=f"{self.username} (@{self.display_name})",
                 moderator=interaction.user)
-            embed.add_field(name="Reason", value=self.reason, inline=False)
-            embed.add_field(name="Type",
-                            value="PC Ban (Device-based)",
-                            inline=True)
-            embed.add_field(name="Status", value="Permanent", inline=True)
+            embed.add_field(name="💢 Reason", value=self.reason, inline=False)
+            embed.add_field(name="💻 Type", value="PC Ban (Device-based)", inline=True)
+            embed.add_field(name="⏰ Status", value="Permanent", inline=True)
 
-            await interaction.edit_original_response(content=None,
-                                                     embed=embed,
-                                                     view=None)
+            await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except requests.exceptions.ConnectionError:
-            await interaction.edit_original_response(
-                content="Failed to connect to game server.", view=None)
+            await interaction.edit_original_response(content="Failed to connect to game server.", view=None)
         except requests.exceptions.Timeout:
-            await interaction.edit_original_response(content="Server timeout.",
-                                                     view=None)
+            await interaction.edit_original_response(content="Server timeout.", view=None)
         except Exception as e:
             logger.error(f"PC ban error: {str(e)}")
-            await interaction.edit_original_response(
-                content=f"Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel",
                        style=discord.ButtonStyle.secondary,
                        emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(
-                "This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session, DARLING~", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="PC Ban cancelled.",
-                                                embed=None,
-                                                view=None)
+        await interaction.response.edit_message(content="PC Ban cancelled.", embed=None, view=None)
 
 
 class UnPCBanView(View):
@@ -725,8 +659,7 @@ class UnPCBanView(View):
                        emoji="✅")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(
-                "This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session, DARLING~", ephemeral=True)
             return
 
         button.disabled = True
@@ -742,55 +675,39 @@ class UnPCBanView(View):
 
             logger.info(f"Sending PC unban command: {unpcban_data}")
 
-            response = requests.post(f"{API_URL}/send_command",
-                                     json=unpcban_data,
-                                     timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=unpcban_data, timeout=10)
             response.raise_for_status()
 
-            logger.info(
-                f"PC unban response: {response.status_code} - {response.text}")
+            logger.info(f"PC unban response: {response.status_code} - {response.text}")
 
-            embed = ModerationEmbed(
+            embed = ZeroTwoEmbed(
                 title="PC Unban Executed",
                 description=f"**{self.username}** has been PC unbanned.",
-                color=discord.Color.green(),
+                color=0x00ff00,
                 target_user=f"{self.username} (@{self.display_name})",
                 moderator=interaction.user)
-            embed.add_field(name="Type",
-                            value="PC Unban (Device-based)",
-                            inline=True)
-            embed.add_field(
-                name="Note",
-                value="The player can now join from previously banned devices.",
-                inline=False)
+            embed.add_field(name="💻 Type", value="PC Unban (Device-based)", inline=True)
+            embed.add_field(name="📝 Note", value="The player can now join from previously banned devices.", inline=False)
 
-            await interaction.edit_original_response(content=None,
-                                                     embed=embed,
-                                                     view=None)
+            await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except requests.exceptions.ConnectionError:
-            await interaction.edit_original_response(
-                content="Failed to connect to game server.", view=None)
+            await interaction.edit_original_response(content="Failed to connect to game server.", view=None)
         except requests.exceptions.Timeout:
-            await interaction.edit_original_response(content="Server timeout.",
-                                                     view=None)
+            await interaction.edit_original_response(content="Server timeout.", view=None)
         except Exception as e:
             logger.error(f"PC unban error: {str(e)}")
-            await interaction.edit_original_response(
-                content=f"Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel",
                        style=discord.ButtonStyle.secondary,
                        emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(
-                "This is not your session.", ephemeral=True)
+            await interaction.response.send_message("This is not your session, DARLING~", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="PC Unban cancelled.",
-                                                embed=None,
-                                                view=None)
+        await interaction.response.edit_message(content="PC Unban cancelled.", embed=None, view=None)
 
 
 class AnnounceView(View):
@@ -805,8 +722,7 @@ class AnnounceView(View):
                        emoji="📢")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
         button.disabled = True
@@ -819,37 +735,30 @@ class AnnounceView(View):
                 "message": self.message,
                 "executor": interaction.user.name
             }
-            response = requests.post(f"{API_URL}/send_command",
-                                     json=announce_data,
-                                     timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=announce_data, timeout=10)
             response.raise_for_status()
 
-            embed = ModerationEmbed(
+            embed = ZeroTwoEmbed(
                 title="Announcement Sent",
                 description="Announcement has been sent to all players.",
-                color=discord.Color.green(),
+                color=0x00ff00,
                 moderator=interaction.user)
-            embed.add_field(name="Message", value=self.message, inline=False)
+            embed.add_field(name="📝 Message", value=self.message, inline=False)
 
-            await interaction.edit_original_response(content=None,
-                                                     embed=embed,
-                                                     view=None)
+            await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except Exception as e:
-            await interaction.edit_original_response(
-                content=f"Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel",
                        style=discord.ButtonStyle.secondary,
                        emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message(" Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
-        await interaction.response.edit_message(
-            content="Announcement cancelled.", embed=None, view=None)
+        await interaction.response.edit_message(content="Announcement cancelled.", embed=None, view=None)
 
 
 class BroadcastView(View):
@@ -864,8 +773,7 @@ class BroadcastView(View):
                        emoji="📡")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
         button.disabled = True
@@ -878,38 +786,30 @@ class BroadcastView(View):
                 "message": self.message,
                 "executor": interaction.user.name
             }
-            response = requests.post(f"{API_URL}/send_command",
-                                     json=broadcast_data,
-                                     timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=broadcast_data, timeout=10)
             response.raise_for_status()
 
-            embed = ModerationEmbed(
+            embed = ZeroTwoEmbed(
                 title="Broadcast Sent",
                 description="Message broadcasted to all players.",
-                color=discord.Color.blue(),
+                color=0x0000ff,
                 moderator=interaction.user)
-            embed.add_field(name="Message", value=self.message, inline=False)
+            embed.add_field(name="📝 Message", value=self.message, inline=False)
 
-            await interaction.edit_original_response(content=None,
-                                                     embed=embed,
-                                                     view=None)
+            await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except Exception as e:
-            await interaction.edit_original_response(
-                content=f"Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel",
                        style=discord.ButtonStyle.secondary,
                        emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="Broadcast cancelled.",
-                                                embed=None,
-                                                view=None)
+        await interaction.response.edit_message(content="Broadcast cancelled.", embed=None, view=None)
 
 
 class NoteView(View):
@@ -928,8 +828,7 @@ class NoteView(View):
                        emoji="📝")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
         button.disabled = True
@@ -943,39 +842,31 @@ class NoteView(View):
                 "note": self.note,
                 "executor": interaction.user.name
             }
-            response = requests.post(f"{API_URL}/send_command",
-                                     json=note_data,
-                                     timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=note_data, timeout=10)
             response.raise_for_status()
 
-            embed = ModerationEmbed(
+            embed = ZeroTwoEmbed(
                 title="Note Added",
                 description=f"**{self.username}** has a new note.",
-                color=discord.Color.green(),
+                color=0x00ff00,
                 target_user=f"{self.username} (@{self.display_name})",
                 moderator=interaction.user)
-            embed.add_field(name="Note", value=self.note, inline=False)
+            embed.add_field(name="📝 Note", value=self.note, inline=False)
 
-            await interaction.edit_original_response(content=None,
-                                                     embed=embed,
-                                                     view=None)
+            await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except Exception as e:
-            await interaction.edit_original_response(
-                content=f"❌ Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"❌ Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel",
                        style=discord.ButtonStyle.secondary,
                        emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
-        await interaction.response.edit_message(content="Note cancelled.",
-                                                embed=None,
-                                                view=None)
+        await interaction.response.edit_message(content="Note cancelled.", embed=None, view=None)
 
 
 class CleanNotesView(View):
@@ -993,8 +884,7 @@ class CleanNotesView(View):
                        emoji="🧹")
     async def confirm(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
         button.disabled = True
@@ -1007,38 +897,30 @@ class CleanNotesView(View):
                 "userid": self.userid,
                 "executor": interaction.user.name
             }
-            response = requests.post(f"{API_URL}/send_command",
-                                     json=clean_data,
-                                     timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=clean_data, timeout=10)
             response.raise_for_status()
 
-            embed = ModerationEmbed(
+            embed = ZeroTwoEmbed(
                 title="Notes Cleaned",
-                description=
-                f"All notes for **{self.username}** have been removed.",
-                color=discord.Color.green(),
+                description=f"All notes for **{self.username}** have been removed.",
+                color=0x00ff00,
                 target_user=f"{self.username} (@{self.display_name})",
                 moderator=interaction.user)
 
-            await interaction.edit_original_response(content=None,
-                                                     embed=embed,
-                                                     view=None)
+            await interaction.edit_original_response(content=None, embed=embed, view=None)
 
         except Exception as e:
-            await interaction.edit_original_response(
-                content=f"Error: {str(e)}", view=None)
+            await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
     @discord.ui.button(label="Cancel",
                        style=discord.ButtonStyle.secondary,
                        emoji="✖️")
     async def cancel(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.interaction_user:
-            await interaction.response.send_message("Not your session.",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
             return
 
-        await interaction.response.edit_message(
-            content="Clean notes cancelled.", embed=None, view=None)
+        await interaction.response.edit_message(content="Clean notes cancelled.", embed=None, view=None)
 
 
 def is_authorized(interaction: discord.Interaction) -> bool:
@@ -1059,8 +941,7 @@ def is_admin(interaction: discord.Interaction) -> bool:
 
 async def get_roblox_user_data(userid: str):
     try:
-        res = requests.get(f"https://users.roblox.com/v1/users/{userid}",
-                           timeout=5)
+        res = requests.get(f"https://users.roblox.com/v1/users/{userid}", timeout=5)
         if res.status_code != 200:
             return None
         data = res.json()
@@ -1092,45 +973,33 @@ def check_api():
 # ===== KICK COMMANDS =====
 @tree.command(name="kick", description="Kick a player from the Roblox server")
 @app_commands.describe(userid="Roblox UserID", reason="Kick reason")
-async def kick_command(interaction: discord.Interaction, userid: str,
-                       reason: str):
+async def kick_command(interaction: discord.Interaction, userid: str, reason: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     data = await get_roblox_user_data(userid)
     if not data:
-        embed = ModerationEmbed(
-            title="User not found",
-            description=f"ID `{userid}` not found on Roblox.",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="User not found", description=f"ID `{userid}` not found on Roblox.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
-    embed = ModerationEmbed(title="Confirm Kick",
-                            description=f"Kick **{data['name']}**?",
-                            color=discord.Color.orange(),
-                            target_user=f"{data['name']} (@{data['display']})",
-                            moderator=interaction.user)
+    embed = ZeroTwoEmbed(title="Confirm Kick", description=f"Kick **{data['name']}**?", color=0xffa500,
+                         target_user=f"{data['name']} (@{data['display']})", moderator=interaction.user)
     if data['avatar']:
         embed.set_thumbnail(url=data['avatar'])
-    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
-    embed.add_field(name="Reason", value=reason, inline=True)
+    embed.add_field(name="🆔 UserID", value=f"`{userid}`", inline=True)
+    embed.add_field(name="💢 Reason", value=reason, inline=True)
 
     await interaction.followup.send(embed=embed,
-                                    view=ConfirmActionView(
-                                        "kick", userid, reason, data['name'],
-                                        interaction.user))
+                                    view=ConfirmActionView("kick", userid, reason, data['name'], interaction.user))
 
 
 # ===== USERLOGS COMMANDS =====
@@ -1138,144 +1007,105 @@ async def kick_command(interaction: discord.Interaction, userid: str,
 @app_commands.describe(userid="Roblox UserID")
 async def userlogs_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     data = await get_roblox_user_data(userid)
     if not data:
-        embed = ModerationEmbed(
-            title="User not found",
-            description=f"ID `{userid}` not found on Roblox.",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="User not found", description=f"ID `{userid}` not found on Roblox.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     try:
-        response = requests.get(f"{API_URL}/user_logs?userid={userid}",
-                                timeout=10)
+        response = requests.get(f"{API_URL}/user_logs?userid={userid}", timeout=10)
 
-        embed = ModerationEmbed(
-            title="User Logs",
-            description=f"Moderation history for **{data['name']}**",
-            color=discord.Color.blue(),
-            target_user=f"{data['name']} (@{data['display']})",
-            moderator=interaction.user)
+        embed = ZeroTwoEmbed(title="User Logs", description=f"Moderation history for **{data['name']}**", color=0x0000ff,
+                             target_user=f"{data['name']} (@{data['display']})", moderator=interaction.user)
 
         if data['avatar']:
             embed.set_thumbnail(url=data['avatar'])
 
-        embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
+        embed.add_field(name="🆔 UserID", value=f"`{userid}`", inline=True)
 
         if response.status_code == 200:
             logs = response.json()
             if logs and len(logs) > 0:
                 for i, log in enumerate(logs[:5]):
                     embed.add_field(
-                        name=
-                        f"{log.get('action', 'Action').title()} - {log.get('date', 'Unknown')}",
-                        value=
-                        f"**Reason:** {log.get('reason', 'No reason')}\n**Moderator:** {log.get('moderator', 'Unknown')}",
+                        name=f"{log.get('action', 'Action').title()} - {log.get('date', 'Unknown')}",
+                        value=f"**Reason:** {log.get('reason', 'No reason')}\n**Moderator:** {log.get('moderator', 'Unknown')}",
                         inline=False)
                 if len(logs) > 5:
-                    embed.set_footer(text=f"And {len(logs)-5} more logs...")
+                    embed.set_footer(text=f"And {len(logs)-5} more logs... • Zero Two")
             else:
-                embed.add_field(
-                    name="No Logs",
-                    value="No moderation logs found for this user.",
-                    inline=False)
+                embed.add_field(name="No Logs", value="No moderation logs found for this user.", inline=False)
         else:
-            embed.add_field(name="Logs Unavailable",
-                            value="Could not fetch logs from server.",
-                            inline=False)
+            embed.add_field(name="Logs Unavailable", value="Could not fetch logs from server.", inline=False)
 
         await interaction.followup.send(embed=embed)
 
     except Exception as e:
-        embed = ModerationEmbed(title="Error",
-                                description=f"Cannot get user logs: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Error", description=f"Cannot get user logs: {str(e)}", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
 # ===== ADDNOTE COMMANDS =====
 @tree.command(name="addnote", description="Add a note to a player")
 @app_commands.describe(userid="Roblox UserID", note="Note to add")
-async def addnote_command(interaction: discord.Interaction, userid: str,
-                          note: str):
+async def addnote_command(interaction: discord.Interaction, userid: str, note: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     data = await get_roblox_user_data(userid)
     if not data:
-        embed = ModerationEmbed(
-            title="User not found",
-            description=f"ID `{userid}` not found on Roblox.",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="User not found", description=f"ID `{userid}` not found on Roblox.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
-    embed = ModerationEmbed(title="Confirm Note",
-                            description=f"Add note to **{data['name']}**?",
-                            color=discord.Color.blue(),
-                            target_user=f"{data['name']} (@{data['display']})",
-                            moderator=interaction.user)
+    embed = ZeroTwoEmbed(title="Confirm Note", description=f"Add note to **{data['name']}**?", color=0x0000ff,
+                         target_user=f"{data['name']} (@{data['display']})", moderator=interaction.user)
     if data['avatar']:
         embed.set_thumbnail(url=data['avatar'])
-    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
-    embed.add_field(name="Note", value=note, inline=False)
+    embed.add_field(name="🆔 UserID", value=f"`{userid}`", inline=True)
+    embed.add_field(name="📝 Note", value=note, inline=False)
 
     await interaction.followup.send(embed=embed,
-                                    view=NoteView(userid, note, data['name'],
-                                                  data['display'],
-                                                  interaction.user))
+                                    view=NoteView(userid, note, data['name'], data['display'], interaction.user))
 
 
 # ===== USERINFO COMMANDS =====
-@tree.command(name="userinfo",
-              description="Display information about a user on Roblox")
+@tree.command(name="userinfo", description="Display information about a user on Roblox")
 @app_commands.describe(userid="Roblox UserID")
 async def userinfo_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title=" Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     data = await get_roblox_user_data(userid)
     if not data:
-        embed = ModerationEmbed(
-            title="User not found",
-            description=f"ID `{userid}` not found on Roblox.",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="User not found", description=f"ID `{userid}` not found on Roblox.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
@@ -1297,28 +1127,24 @@ async def userinfo_command(interaction: discord.Interaction, userid: str):
     except:
         pass
 
-    embed = ModerationEmbed(title="User Information",
-                            description=f"Roblox profile information",
-                            color=discord.Color.blue())
+    embed = ZeroTwoEmbed(title="User Information", description=f"Roblox profile information", color=0xff69b4)
 
     if data['avatar']:
         embed.set_thumbnail(url=data['avatar'])
 
-    embed.add_field(name="Username", value=data['name'], inline=True)
-    embed.add_field(name="Display Name", value=data['display'], inline=True)
-    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
+    embed.add_field(name="👤 Username", value=data['name'], inline=True)
+    embed.add_field(name="✨ Display Name", value=data['display'], inline=True)
+    embed.add_field(name="🆔 UserID", value=f"`{userid}`", inline=True)
 
     if is_banned:
         ban_status = "Banned"
         if ban_type == "pc":
             ban_status = "💻 PC Banned"
-        embed.add_field(name="Ban Status", value=ban_status, inline=True)
-        embed.add_field(name="Ban Reason", value=ban_reason, inline=False)
-        embed.add_field(name="Ban Type",
-                        value="PC Ban" if ban_type == "pc" else "Normal Ban",
-                        inline=True)
+        embed.add_field(name="🚫 Ban Status", value=ban_status, inline=True)
+        embed.add_field(name="💢 Ban Reason", value=ban_reason, inline=False)
+        embed.add_field(name="🔰 Ban Type", value="PC Ban" if ban_type == "pc" else "Normal Ban", inline=True)
     else:
-        embed.add_field(name="Ban Status", value="Not banned", inline=True)
+        embed.add_field(name="🚫 Ban Status", value="✅ Not banned", inline=True)
 
     await interaction.followup.send(embed=embed)
 
@@ -1328,16 +1154,13 @@ async def userinfo_command(interaction: discord.Interaction, userid: str):
 @app_commands.describe(placeid="Roblox Place ID")
 async def gameinfo_command(interaction: discord.Interaction, placeid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not placeid.isdigit():
-        embed = ModerationEmbed(title="Invalid Place ID",
-                                description="Place ID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid Place ID", description="Place ID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
@@ -1350,142 +1173,117 @@ async def gameinfo_command(interaction: discord.Interaction, placeid: str):
             data = response.json()
             if data and len(data) > 0:
                 game = data[0]
-                embed = ModerationEmbed(
-                    title="🎮 Game Information",
-                    description=f"**{game.get('name', 'Unknown Game')}**",
-                    color=discord.Color.purple())
+                embed = ZeroTwoEmbed(title="🎮 Game Information", description=f"**{game.get('name', 'Unknown Game')}**", color=0x800080)
 
-                embed.add_field(name="Place ID",
-                                value=f"`{placeid}`",
-                                inline=True)
-                embed.add_field(name="Name",
-                                value=game.get('name', 'Unknown'),
-                                inline=True)
-                embed.add_field(
-                    name="Description",
-                    value=game.get('description', 'No description')[:100] +
-                    "...",
-                    inline=False)
+                embed.add_field(name="🆔 Place ID", value=f"`{placeid}`", inline=True)
+                embed.add_field(name="📛 Name", value=game.get('name', 'Unknown'), inline=True)
+                embed.add_field(name="📝 Description", value=game.get('description', 'No description')[:100] + "...", inline=False)
 
                 # Try to get player count
                 try:
-                    players_res = requests.get(f"{API_URL}/get_players",
-                                               timeout=5)
+                    players_res = requests.get(f"{API_URL}/get_players", timeout=5)
                     if players_res.status_code == 200:
                         players_data = players_res.json()
                         player_count = players_data.get('count', 0)
-                        embed.add_field(name="Current Players",
-                                        value=str(player_count),
-                                        inline=True)
+                        embed.add_field(name="👥 Current Players", value=str(player_count), inline=True)
                 except:
                     pass
             else:
-                embed = ModerationEmbed(
-                    title="Game Not Found",
-                    description=f"Place ID `{placeid}` not found on Roblox.",
-                    color=discord.Color.red())
+                embed = ZeroTwoEmbed(title="Game Not Found", description=f"Place ID `{placeid}` not found on Roblox.", color=0xff0000)
         else:
-            embed = ModerationEmbed(
-                title="Error",
-                description=f"Failed to get game info: {response.status_code}",
-                color=discord.Color.red())
+            embed = ZeroTwoEmbed(title="Error", description=f"Failed to get game info: {response.status_code}", color=0xff0000)
 
         await interaction.followup.send(embed=embed)
 
     except Exception as e:
-        embed = ModerationEmbed(title="Error",
-                                description=f"Cannot get game info: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Error", description=f"Cannot get game info: {str(e)}", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
 # ===== ANNOUNCMENT COMMANDS =====
-@tree.command(name="announcement",
-              description="Display an announcement on the Roblox server")
+@tree.command(name="announcement", description="Display an announcement on the Roblox server")
 @app_commands.describe(message="Announcement message")
 async def announcement_command(interaction: discord.Interaction, message: str):
     if not is_admin(interaction):
-        await interaction.response.send_message("Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only, DARLING~", ephemeral=True)
         return
 
-    embed = ModerationEmbed(
-        title="Announcement Confirmation",
-        description=f"Send this announcement to all players?",
-        color=discord.Color.gold(),
-        moderator=interaction.user)
-    embed.add_field(name="Message", value=message, inline=False)
+    embed = ZeroTwoEmbed(title="Announcement Confirmation", description="Send this announcement to all players?", color=0xffd700,
+                         moderator=interaction.user)
+    embed.add_field(name="📝 Message", value=message, inline=False)
 
-    await interaction.response.send_message(embed=embed,
-                                            view=AnnounceView(
-                                                message, interaction.user))
+    await interaction.response.send_message(embed=embed, view=AnnounceView(message, interaction.user))
 
 
 # ===== CLEANOTES COMMANDS =====
-@tree.command(name="cleanotes",
-              description="Remove all moderation notes from a player")
+@tree.command(name="cleanotes", description="Remove all moderation notes from a player")
 @app_commands.describe(userid="Roblox UserID")
 async def cleanotes_command(interaction: discord.Interaction, userid: str):
     if not is_admin(interaction):
-        await interaction.response.send_message("Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     data = await get_roblox_user_data(userid)
     if not data:
-        embed = ModerationEmbed(
-            title="User not found",
-            description=f"ID `{userid}` not found on Roblox.",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="User not found", description=f"ID `{userid}` not found on Roblox.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
-    embed = ModerationEmbed(
-        title="Confirm Clean Notes",
-        description=f"Remove ALL notes for **{data['name']}**?",
-        color=discord.Color.orange(),
-        target_user=f"{data['name']} (@{data['display']})",
-        moderator=interaction.user)
+    embed = ZeroTwoEmbed(title="Confirm Clean Notes", description=f"Remove ALL notes for **{data['name']}**?", color=0xffa500,
+                         target_user=f"{data['name']} (@{data['display']})", moderator=interaction.user)
     if data['avatar']:
         embed.set_thumbnail(url=data['avatar'])
-    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
-    embed.add_field(
-        name="Warning",
-        value=
-        "This action cannot be undone! All notes will be permanently deleted.",
-        inline=False)
+    embed.add_field(name="🆔 UserID", value=f"`{userid}`", inline=True)
+    embed.add_field(name="⚠️ Warning", value="This action cannot be undone! All notes will be permanently deleted.", inline=False)
 
     await interaction.followup.send(embed=embed,
-                                    view=CleanNotesView(
-                                        userid, data['name'], data['display'],
-                                        interaction.user))
+                                    view=CleanNotesView(userid, data['name'], data['display'], interaction.user))
 
 
 # ===== PING COMMANDS =====
-    # ===== PING COMMANDS =====
-    @tree.command(name="ping", description="Check bot status")
-    async def ping_command(interaction: discord.Interaction):
-        latency = round(bot.latency * 1000, 2)
-        api_status = check_api()
+@tree.command(name="ping", description="Check bot status")
+async def ping_command(interaction: discord.Interaction):
+    latency = round(bot.latency * 1000, 2)
+    api_status = check_api()
 
-        embed = ModerationEmbed(title="Kynx SS 10 Status",
-                                description="Bot status check",
-                                color=discord.Color.blue())
+    # Zero Two theme based on latency
+    if latency < 100:
+        color = 0xff69b4  # Hot Pink
+        mood = "⚡ Zero Two: DARLING is so fast! ⚡"
+    elif latency < 200:
+        color = 0xff1493  # Deep Pink
+        mood = "💕 Zero Two: Perfect as always, DARLING~ 💕"
+    elif latency < 300:
+        color = 0xdb7093  # Pale Violet Red
+        mood = "😊 Zero Two: Not bad, my DARLING 😊"
+    elif latency < 500:
+        color = 0xc71585  # Medium Violet Red
+        mood = "😴 Zero Two: DARLING is sleepy... 😴"
+    else:
+        color = 0x8b0000  # Dark Red
+        mood = "💢 Zero Two: DARLING! So slow! 💢"
 
-        embed.add_field(name="Bot Latency", value=f"{latency}ms", inline=True)
-        embed.add_field(name="API Status",
-                        value="✅ Online" if api_status else "❌ Offline",
-                        inline=True)
-        embed.add_field(name="Version", value="test", inline=True)
+    embed = ZeroTwoEmbed(
+        title="ZERO TWO STATUS",
+        description=f"Code:002 - Partner Kynx",
+        color=color
+    )
 
-        await interaction.response.send_message(embed=embed)
+    embed.add_field(name="📡 Connection Latency", value=f"```{latency}ms```", inline=True)
+    embed.add_field(name="💫 API Connection", value="✨ ONLINE ✨" if api_status else "💔 OFFLINE 💔", inline=True)
+    embed.add_field(name="🔰 Version", value="```v.002```", inline=True)
+    embed.add_field(name="💬 Zero Two Says:", value=f"*{mood}*", inline=False)
+
+    await interaction.response.send_message(embed=embed)
+
+
 # ===== BAN COMMANDS =====
 @tree.command(name="ban", description="Ban a player")
 @app_commands.describe(
@@ -1499,60 +1297,47 @@ async def ban_command(interaction: discord.Interaction,
                       duration: int = -1,
                       ban_type: str = "normal"):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     data = await get_roblox_user_data(userid)
     if not data:
-        embed = ModerationEmbed(
-            title="User not found",
-            description=f"ID `{userid}` not found on Roblox.",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="User not found", description=f"ID `{userid}` not found on Roblox.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
-    if duration == -1:
-        duration_text = "permanent"
-    else:
-        duration_text = f"{duration} days"
+    duration_text = "permanent" if duration == -1 else f"{duration} days"
 
     if ban_type not in ["normal", "pc"]:
         ban_type = "normal"
 
     ban_type_display = "PC Ban" if ban_type == "pc" else "Normal Ban"
 
-    embed = ModerationEmbed(
+    embed = ZeroTwoEmbed(
         title=f"Confirm {ban_type_display}",
         description=f"{ban_type_display} **{data['name']}**?",
-        color=discord.Color.dark_red()
-        if ban_type == "pc" else discord.Color.orange(),
+        color=0x8b0000 if ban_type == "pc" else 0xffa500,
         target_user=f"{data['name']} (@{data['display']})",
         moderator=interaction.user)
+
     if data['avatar']:
         embed.set_thumbnail(url=data['avatar'])
-    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
-    embed.add_field(name="Reason", value=reason, inline=True)
-    embed.add_field(name="Duration", value=duration_text, inline=True)
-    embed.add_field(name="Type", value=ban_type_display, inline=True)
+
+    embed.add_field(name="🆔 UserID", value=f"`{userid}`", inline=True)
+    embed.add_field(name="💢 Reason", value=reason, inline=True)
+    embed.add_field(name="⏰ Duration", value=duration_text, inline=True)
+    embed.add_field(name="🔰 Type", value=ban_type_display, inline=True)
 
     await interaction.followup.send(embed=embed,
-                                    view=ConfirmActionView("ban",
-                                                           userid,
-                                                           reason,
-                                                           data['name'],
-                                                           interaction.user,
-                                                           duration,
-                                                           ban_type=ban_type))
+                                    view=ConfirmActionView("ban", userid, reason, data['name'],
+                                                           interaction.user, duration, ban_type=ban_type))
 
 
 # ===== CHECK COMMANDS =====
@@ -1565,39 +1350,25 @@ async def check_command(interaction: discord.Interaction):
         count = data.get('count', 0)
 
         if count == 0:
-            embed = ModerationEmbed(title="🌙 Server Empty",
-                                    description="No players online.",
-                                    color=discord.Color.light_grey())
+            embed = ZeroTwoEmbed(title="🌙 Server Empty", description="No players online.", color=0x808080)
         elif count < 10:
-            embed = ModerationEmbed(
-                title="🟢 Server Online",
-                description=
-                f"{count} player{'s' if count != 1 else ''} online.",
-                color=discord.Color.green())
+            embed = ZeroTwoEmbed(title="🟢 Server Online", description=f"{count} player{'s' if count != 1 else ''} online.", color=0x00ff00)
         elif count < 30:
-            embed = ModerationEmbed(title="🟡 Server Busy",
-                                    description=f"{count} players online.",
-                                    color=discord.Color.gold())
+            embed = ZeroTwoEmbed(title="🟡 Server Busy", description=f"{count} players online.", color=0xffd700)
         else:
-            embed = ModerationEmbed(title="🔴 Server Full",
-                                    description=f"{count} players online.",
-                                    color=discord.Color.red())
+            embed = ZeroTwoEmbed(title="🔴 Server Full", description=f"{count} players online.", color=0xff0000)
 
         await interaction.response.send_message(embed=embed)
     except:
-        embed = ModerationEmbed(title="Server Error",
-                                description="Cannot connect to server.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Server Error", description="Cannot connect to server.", color=0xff0000)
         await interaction.response.send_message(embed=embed)
 
 
 # ===== BANLIST COMMANDS =====
-@tree.command(name="banlist",
-              description="View bans (automatically saves to server files)")
+@tree.command(name="banlist", description="View bans (automatically saves to server files)")
 async def banlist_command(interaction: discord.Interaction):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -1642,18 +1413,14 @@ async def banlist_command(interaction: discord.Interaction):
 
         saved_filepath = save_banlist_to_disk(enriched_bans)
 
-        view = BanListView(enriched_bans,
-                           interaction.user,
-                           saved_filename=saved_filepath)
+        view = BanListView(enriched_bans, interaction.user, saved_filename=saved_filepath)
         embed = view.get_embed()
 
         await interaction.followup.send(embed=embed, view=view)
 
     except Exception as e:
         logger.error(f"Error getting/saving banlist: {str(e)}")
-        embed = ModerationEmbed(title="Connection Error",
-                                description="Cannot get ban list.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Connection Error", description="Cannot get ban list.", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
@@ -1666,16 +1433,13 @@ async def unban_command(interaction: discord.Interaction,
                         userid: str,
                         ban_type: str = "auto"):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
@@ -1691,38 +1455,27 @@ async def unban_command(interaction: discord.Interaction,
                 break
 
         if not user_ban:
-            embed = ModerationEmbed(
-                title="Not banned",
-                description=f"UserID `{userid}` is not banned.",
-                color=discord.Color.orange())
+            embed = ZeroTwoEmbed(title="Not banned", description=f"UserID `{userid}` is not banned.", color=0xffa500)
             await interaction.followup.send(embed=embed)
             return
 
         roblox_data = await get_roblox_user_data(userid)
-        username = roblox_data['name'] if roblox_data else user_ban.get(
-            'username', 'Unknown')
+        username = roblox_data['name'] if roblox_data else user_ban.get('username', 'Unknown')
 
         detected_ban_type = user_ban.get('banType', 'normal')
         if ban_type != "auto":
             detected_ban_type = ban_type
 
-        embed = ModerationEmbed(
+        embed = ZeroTwoEmbed(
             title=f"Confirm {'PC ' if detected_ban_type == 'pc' else ''}Unban",
-            description=
-            f"{'PC ' if detected_ban_type == 'pc' else ''}Unban **{username}**?",
-            color=discord.Color.gold(),
+            description=f"{'PC ' if detected_ban_type == 'pc' else ''}Unban **{username}**?",
+            color=0xffd700,
             target_user=f"{username} ({userid})",
             moderator=interaction.user)
-        embed.add_field(name="Ban Reason",
-                        value=user_ban.get('reason', 'No reason'),
-                        inline=False)
-        embed.add_field(name="Banned By",
-                        value=user_ban.get('executor', 'Unknown'),
-                        inline=True)
-        embed.add_field(
-            name="Ban Type",
-            value="PC Ban" if detected_ban_type == "pc" else "Normal Ban",
-            inline=True)
+
+        embed.add_field(name="💢 Ban Reason", value=user_ban.get('reason', 'No reason'), inline=False)
+        embed.add_field(name="👤 Banned By", value=user_ban.get('executor', 'Unknown'), inline=True)
+        embed.add_field(name="🔰 Ban Type", value="PC Ban" if detected_ban_type == "pc" else "Normal Ban", inline=True)
 
         if roblox_data and roblox_data['avatar']:
             embed.set_thumbnail(url=roblox_data['avatar'])
@@ -1731,9 +1484,7 @@ async def unban_command(interaction: discord.Interaction,
         await interaction.followup.send(embed=embed, view=view)
 
     except:
-        embed = ModerationEmbed(title="Error",
-                                description="Cannot process unban.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Error", description="Cannot process unban.", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
@@ -1741,23 +1492,13 @@ async def unban_command(interaction: discord.Interaction,
 @tree.command(name="restart", description="Restart server (Admin)")
 async def restart_command(interaction: discord.Interaction):
     if not is_admin(interaction):
-        await interaction.response.send_message("Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only, DARLING~", ephemeral=True)
         return
 
-    embed = ModerationEmbed(title="Restart Server",
-                            description="Restart the game server?",
-                            color=discord.Color.orange(),
-                            moderator=interaction.user)
-    embed.add_field(name="Warning",
-                    value="All players will be disconnected.",
-                    inline=False)
+    embed = ZeroTwoEmbed(title="Restart Server", description="Restart the game server?", color=0xffa500, moderator=interaction.user)
+    embed.add_field(name="⚠️ Warning", value="All players will be disconnected.", inline=False)
 
-    view = ConfirmActionView("restart",
-                             "",
-                             "",
-                             "",
-                             interaction.user,
-                             is_admin=True)
+    view = ConfirmActionView("restart", "", "", "", interaction.user, is_admin=True)
     await interaction.response.send_message(embed=embed, view=view)
 
 
@@ -1765,23 +1506,13 @@ async def restart_command(interaction: discord.Interaction):
 @tree.command(name="shutdown", description="Shutdown server (Admin)")
 async def shutdown_command(interaction: discord.Interaction):
     if not is_admin(interaction):
-        await interaction.response.send_message("Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only, DARLING~", ephemeral=True)
         return
 
-    embed = ModerationEmbed(title="Shutdown Server",
-                            description="Shutdown the game server?",
-                            color=discord.Color.red(),
-                            moderator=interaction.user)
-    embed.add_field(name="Warning",
-                    value="Server will stop completely.",
-                    inline=False)
+    embed = ZeroTwoEmbed(title="Shutdown Server", description="Shutdown the game server?", color=0xff0000, moderator=interaction.user)
+    embed.add_field(name="⚠️ Warning", value="Server will stop completely.", inline=False)
 
-    view = ConfirmActionView("shutdown",
-                             "",
-                             "",
-                             "",
-                             interaction.user,
-                             is_admin=True)
+    view = ConfirmActionView("shutdown", "", "", "", interaction.user, is_admin=True)
     await interaction.response.send_message(embed=embed, view=view)
 
 
@@ -1789,8 +1520,7 @@ async def shutdown_command(interaction: discord.Interaction):
 @tree.command(name="players", description="Show detailed online player list")
 async def players_command(interaction: discord.Interaction):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -1802,12 +1532,10 @@ async def players_command(interaction: discord.Interaction):
         count = data.get('count', 0)
         players = data.get('players', [])
 
-        embed = ModerationEmbed(title="🎮 Online Players",
-                                description=f"Total online: **{count}**",
-                                color=discord.Color.blue())
+        embed = ZeroTwoEmbed(title="🎮 Online Players", description=f"Total online: **{count}**", color=0x0000ff)
 
         if not players:
-            embed.description = (embed.description or "") + "\n\n*No player details available.*"
+            embed.description = f"Total online: **{count}**\n\n*No player details available.*"
         else:
             for i, p in enumerate(players[:25], 1):
                 userid = p.get('userid', 'Unknown')
@@ -1830,28 +1558,21 @@ async def players_command(interaction: discord.Interaction):
 
 # ===== WARN COMMANDS =====
 @tree.command(name="warn", description="Warn a player")
-async def warn_command(interaction: discord.Interaction, userid: str,
-                       reason: str):
+async def warn_command(interaction: discord.Interaction, userid: str, reason: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     data = await get_roblox_user_data(userid)
     if not data:
-        embed = ModerationEmbed(
-            title="User not found",
-            description=f"ID `{userid}` not found on Roblox.",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="User not found", description=f"ID `{userid}` not found on Roblox.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
@@ -1868,11 +1589,9 @@ async def warn_command(interaction: discord.Interaction, userid: str,
         @discord.ui.button(label="Confirm Warn",
                            style=discord.ButtonStyle.secondary,
                            emoji="⚠️")
-        async def confirm(self, interaction: discord.Interaction,
-                          button: Button):
+        async def confirm(self, interaction: discord.Interaction, button: Button):
             if interaction.user != self.interaction_user:
-                await interaction.response.send_message("Not your session.",
-                                                        ephemeral=True)
+                await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
                 return
 
             button.disabled = True
@@ -1886,54 +1605,41 @@ async def warn_command(interaction: discord.Interaction, userid: str,
                     "reason": self.reason,
                     "executor": interaction.user.name
                 }
-                response = requests.post(f"{API_URL}/send_command",
-                                         json=warning_data,
-                                         timeout=10)
+                response = requests.post(f"{API_URL}/send_command", json=warning_data, timeout=10)
                 response.raise_for_status()
 
-                embed = ModerationEmbed(
+                embed = ZeroTwoEmbed(
                     title="Player Warned",
                     description=f"**{self.username}** has been warned.",
-                    color=discord.Color.orange(),
+                    color=0xffa500,
                     target_user=f"{self.username} ({self.userid})",
                     moderator=interaction.user)
-                embed.add_field(name="Reason", value=self.reason, inline=False)
+                embed.add_field(name="💢 Reason", value=self.reason, inline=False)
 
-                await interaction.edit_original_response(content=None,
-                                                         embed=embed,
-                                                         view=None)
+                await interaction.edit_original_response(content=None, embed=embed, view=None)
 
             except Exception as e:
-                await interaction.edit_original_response(
-                    content=f"Error: {str(e)}", view=None)
+                await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
         @discord.ui.button(label="Cancel",
                            style=discord.ButtonStyle.secondary,
                            emoji="✖️")
-        async def cancel(self, interaction: discord.Interaction,
-                         button: Button):
+        async def cancel(self, interaction: discord.Interaction, button: Button):
             if interaction.user != self.interaction_user:
-                await interaction.response.send_message("Not your session.",
-                                                        ephemeral=True)
+                await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
                 return
 
-            await interaction.response.edit_message(content="Warn cancelled.",
-                                                    embed=None,
-                                                    view=None)
+            await interaction.response.edit_message(content="Warn cancelled.", embed=None, view=None)
 
-    embed = ModerationEmbed(title="Confirm Warning",
-                            description=f"Warn **{data['name']}**?",
-                            color=discord.Color.gold(),
-                            target_user=f"{data['name']} (@{data['display']})",
-                            moderator=interaction.user)
+    embed = ZeroTwoEmbed(title="Confirm Warning", description=f"Warn **{data['name']}**?", color=0xffd700,
+                         target_user=f"{data['name']} (@{data['display']})", moderator=interaction.user)
     if data['avatar']:
         embed.set_thumbnail(url=data['avatar'])
-    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
-    embed.add_field(name="Reason", value=reason, inline=False)
+    embed.add_field(name="🆔 UserID", value=f"`{userid}`", inline=True)
+    embed.add_field(name="💢 Reason", value=reason, inline=False)
 
     await interaction.followup.send(embed=embed,
-                                    view=WarnView(userid, reason, data['name'],
-                                                  interaction.user))
+                                    view=WarnView(userid, reason, data['name'], interaction.user))
 
 
 # ===== STATS COMMANDS =====
@@ -1963,27 +1669,19 @@ async def stats_command(interaction: discord.Interaction):
                 else:
                     normal_bans += 1
 
-        embed = ModerationEmbed(title="Server Statistics",
-                                description="Kynx SS 10 - Current server statistics",
-                                color=discord.Color.purple())
+        embed = ZeroTwoEmbed(title="Server Statistics", description="Zero Two's Server Stats", color=0x800080)
 
-        embed.add_field(name="Online Players",
-                        value=str(player_count),
-                        inline=True)
-        embed.add_field(name="Total Bans", value=str(ban_count), inline=True)
-        embed.add_field(name="Normal Bans",
-                        value=str(normal_bans),
-                        inline=True)
-        embed.add_field(name="PC Bans", value=str(pc_bans), inline=True)
-        embed.add_field(name="API Status", value="✅ Online", inline=True)
-        embed.add_field(name="Version", value="SS 10", inline=True)
+        embed.add_field(name="👥 Online Players", value=str(player_count), inline=True)
+        embed.add_field(name="🚫 Total Bans", value=str(ban_count), inline=True)
+        embed.add_field(name="🔨 Normal Bans", value=str(normal_bans), inline=True)
+        embed.add_field(name="💻 PC Bans", value=str(pc_bans), inline=True)
+        embed.add_field(name="💫 API Status", value="✅ Online", inline=True)
+        embed.add_field(name="🔰 Version", value="Code:002", inline=True)
 
         await interaction.followup.send(embed=embed)
 
     except Exception as e:
-        embed = ModerationEmbed(title="Error",
-                                description=f"Cannot get statistics: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Error", description=f"Cannot get statistics: {str(e)}", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
@@ -1992,19 +1690,14 @@ async def stats_command(interaction: discord.Interaction):
 @app_commands.describe(message="Announcement message")
 async def announce_command(interaction: discord.Interaction, message: str):
     if not is_admin(interaction):
-        await interaction.response.send_message("Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only, DARLING~", ephemeral=True)
         return
 
-    embed = ModerationEmbed(
-        title="Announcement Confirmation",
-        description=f"Send this announcement to all players?",
-        color=discord.Color.gold(),
-        moderator=interaction.user)
-    embed.add_field(name="Message", value=message, inline=False)
+    embed = ZeroTwoEmbed(title="Announcement Confirmation", description="Send this announcement to all players?", color=0xffd700,
+                         moderator=interaction.user)
+    embed.add_field(name="📝 Message", value=message, inline=False)
 
-    await interaction.response.send_message(embed=embed,
-                                            view=AnnounceView(
-                                                message, interaction.user))
+    await interaction.response.send_message(embed=embed, view=AnnounceView(message, interaction.user))
 
 
 # ===== BROADCAST COMMANDS =====
@@ -2012,18 +1705,14 @@ async def announce_command(interaction: discord.Interaction, message: str):
 @app_commands.describe(message="Broadcast message")
 async def broadcast_command(interaction: discord.Interaction, message: str):
     if not is_admin(interaction):
-        await interaction.response.send_message("Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only, DARLING~", ephemeral=True)
         return
 
-    embed = ModerationEmbed(title="Broadcast Confirmation",
-                            description=f"Send this broadcast to all players?",
-                            color=discord.Color.blue(),
-                            moderator=interaction.user)
-    embed.add_field(name="Message", value=message, inline=False)
+    embed = ZeroTwoEmbed(title="Broadcast Confirmation", description="Send this broadcast to all players?", color=0x0000ff,
+                         moderator=interaction.user)
+    embed.add_field(name="📝 Message", value=message, inline=False)
 
-    await interaction.response.send_message(embed=embed,
-                                            view=BroadcastView(
-                                                message, interaction.user))
+    await interaction.response.send_message(embed=embed, view=BroadcastView(message, interaction.user))
 
 
 # ===== FIND COMMANDS =====
@@ -2031,8 +1720,7 @@ async def broadcast_command(interaction: discord.Interaction, message: str):
 @app_commands.describe(username="Username to search for")
 async def find_command(interaction: discord.Interaction, username: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2043,32 +1731,20 @@ async def find_command(interaction: discord.Interaction, username: str):
             players_data = response.json()
             player_count = players_data.get('count', 0)
 
-            embed = ModerationEmbed(title="Player Search",
-                                    description=f"Searching for '{username}'",
-                                    color=discord.Color.blue())
+            embed = ZeroTwoEmbed(title="Player Search", description=f"Searching for '{username}'", color=0x0000ff)
 
             if player_count > 0:
-                embed.add_field(
-                    name="Information",
-                    value=
-                    f"Found {player_count} player(s) online.\nNote: Detailed search requires player list API.",
-                    inline=False)
+                embed.add_field(name="Information", value=f"Found {player_count} player(s) online.\nNote: Detailed search requires player list API.", inline=False)
             else:
-                embed.add_field(name="No Players",
-                                value="No players online to search.",
-                                inline=False)
+                embed.add_field(name="No Players", value="No players online to search.", inline=False)
 
             await interaction.followup.send(embed=embed)
         else:
-            embed = ModerationEmbed(title="Error",
-                                    description="Cannot search for players.",
-                                    color=discord.Color.red())
+            embed = ZeroTwoEmbed(title="Error", description="Cannot search for players.", color=0xff0000)
             await interaction.followup.send(embed=embed)
 
     except Exception as e:
-        embed = ModerationEmbed(title="Error",
-                                description=f"Search failed: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Error", description=f"Search failed: {str(e)}", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
@@ -2077,16 +1753,13 @@ async def find_command(interaction: discord.Interaction, username: str):
 @app_commands.describe(userid="Roblox UserID")
 async def lookup_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
@@ -2108,48 +1781,32 @@ async def lookup_command(interaction: discord.Interaction, userid: str):
                     ban_type = ban.get('banType', 'normal')
                     break
 
-        embed = ModerationEmbed(title="Player Lookup",
-                                description=f"Information for **{username}**",
-                                color=discord.Color.blue())
+        embed = ZeroTwoEmbed(title="Player Lookup", description=f"Information for **{username}**", color=0x0000ff)
 
         if data:
             if data['avatar']:
                 embed.set_thumbnail(url=data['avatar'])
-            embed.add_field(name="Roblox Username",
-                            value=data['name'],
-                            inline=True)
-            embed.add_field(name="Display Name",
-                            value=data['display'],
-                            inline=True)
+            embed.add_field(name="👤 Roblox Username", value=data['name'], inline=True)
+            embed.add_field(name="✨ Display Name", value=data['display'], inline=True)
 
-        embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
+        embed.add_field(name="🆔 UserID", value=f"`{userid}`", inline=True)
 
         if is_banned:
             ban_status = "Banned"
             if ban_type == "pc":
                 ban_status = "PC Banned"
-            embed.add_field(name="Ban Status", value=ban_status, inline=True)
-            embed.add_field(name="Ban Reason", value=ban_reason, inline=False)
-            embed.add_field(
-                name="Ban Type",
-                value="PC Ban" if ban_type == "pc" else "Normal Ban",
-                inline=True)
+            embed.add_field(name="🚫 Ban Status", value=ban_status, inline=True)
+            embed.add_field(name="💢 Ban Reason", value=ban_reason, inline=False)
+            embed.add_field(name="🔰 Ban Type", value="PC Ban" if ban_type == "pc" else "Normal Ban", inline=True)
         else:
-            embed.add_field(name="Ban Status",
-                            value="✅ Not banned",
-                            inline=True)
+            embed.add_field(name="🚫 Ban Status", value="✅ Not banned", inline=True)
 
-        embed.add_field(
-            name="Additional Info",
-            value="More detailed history requires player history API.",
-            inline=False)
+        embed.add_field(name="📝 Additional Info", value="More detailed history requires player history API.", inline=False)
 
         await interaction.followup.send(embed=embed)
 
     except Exception as e:
-        embed = ModerationEmbed(title="Error",
-                                description=f"Cannot lookup player: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Error", description=f"Cannot lookup player: {str(e)}", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
@@ -2158,18 +1815,15 @@ async def lookup_command(interaction: discord.Interaction, userid: str):
 @app_commands.describe(lines="Number of log lines (default: 10)")
 async def logs_command(interaction: discord.Interaction, lines: int = 10):
     if not is_admin(interaction):
-        await interaction.response.send_message("Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     try:
-        logs_res = requests.get(f"{API_URL}/get_logs?lines={lines}",
-                                timeout=10)
+        logs_res = requests.get(f"{API_URL}/get_logs?lines={lines}", timeout=10)
 
-        embed = ModerationEmbed(title="Server Logs",
-                                description=f"Recent server activity",
-                                color=discord.Color.dark_grey())
+        embed = ZeroTwoEmbed(title="Server Logs", description="Recent server activity", color=0x808080)
 
         if logs_res.status_code == 200:
             logs_data = logs_res.json()
@@ -2183,54 +1837,37 @@ async def logs_command(interaction: discord.Interaction, lines: int = 10):
                 if len(log_text) > 1000:
                     log_text = log_text[:997] + "..."
 
-                embed.add_field(name=f"Last {len(logs)} entries:",
-                                value=f"```\n{log_text}\n```",
-                                inline=False)
+                embed.add_field(name=f"Last {len(logs)} entries:", value=f"```\n{log_text}\n```", inline=False)
             else:
-                embed.add_field(name="No logs",
-                                value="No log entries available.",
-                                inline=False)
+                embed.add_field(name="No logs", value="No log entries available.", inline=False)
         else:
-            embed.add_field(
-                name="Logs unavailable",
-                value=
-                "Log API endpoint not available.\nCheck API server configuration.",
-                inline=False)
+            embed.add_field(name="Logs unavailable", value="Log API endpoint not available.\nCheck API server configuration.", inline=False)
 
         await interaction.followup.send(embed=embed)
 
     except Exception as e:
-        embed = ModerationEmbed(title="Error",
-                                description=f"Cannot get logs: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Error", description=f"Cannot get logs: {str(e)}", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
 # ===== PCBAN COMMANDS =====
 @tree.command(name="pcban", description="PC Ban player (Device-based ban)")
 @app_commands.describe(userid="Roblox UserID", reason="Ban reason")
-async def pcban_command(interaction: discord.Interaction, userid: str,
-                        reason: str):
+async def pcban_command(interaction: discord.Interaction, userid: str, reason: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     data = await get_roblox_user_data(userid)
     if not data:
-        embed = ModerationEmbed(
-            title="User not found",
-            description=f"ID `{userid}` not found on Roblox.",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="User not found", description=f"ID `{userid}` not found on Roblox.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
@@ -2241,51 +1878,31 @@ async def pcban_command(interaction: discord.Interaction, userid: str,
             bans = response.json()
             for ban in bans:
                 if str(ban.get('userid')) == userid:
-                    embed = ModerationEmbed(
+                    embed = ZeroTwoEmbed(
                         title="Already Banned",
                         description=f"**{data['name']}** is already banned.",
-                        color=discord.Color.orange(),
+                        color=0xffa500,
                         target_user=f"{data['name']} (@{data['display']})",
                         moderator=interaction.user)
-                    embed.add_field(name="Current Ban Reason",
-                                    value=ban.get('reason', 'No reason'),
-                                    inline=False)
-                    embed.add_field(name="Banned By",
-                                    value=ban.get('executor', 'Unknown'),
-                                    inline=True)
-                    embed.add_field(name="Ban Type",
-                                    value="PC Ban" if ban.get('banType')
-                                    == 'pc' else 'Normal Ban',
-                                    inline=True)
+                    embed.add_field(name="💢 Current Ban Reason", value=ban.get('reason', 'No reason'), inline=False)
+                    embed.add_field(name="👤 Banned By", value=ban.get('executor', 'Unknown'), inline=True)
+                    embed.add_field(name="🔰 Ban Type", value="PC Ban" if ban.get('banType') == 'pc' else 'Normal Ban', inline=True)
                     await interaction.followup.send(embed=embed)
                     return
     except:
         pass
 
-    embed = ModerationEmbed(title="Confirm PC Ban",
-                            description=f"PC Ban **{data['name']}**?",
-                            color=discord.Color.dark_red(),
-                            target_user=f"{data['name']} (@{data['display']})",
-                            moderator=interaction.user)
+    embed = ZeroTwoEmbed(title="Confirm PC Ban", description=f"PC Ban **{data['name']}**?", color=0x8b0000,
+                         target_user=f"{data['name']} (@{data['display']})", moderator=interaction.user)
     if data['avatar']:
         embed.set_thumbnail(url=data['avatar'])
-    embed.add_field(name="UserID", value=f"`{userid}`", inline=True)
-    embed.add_field(name="Reason", value=reason, inline=True)
-    embed.add_field(name="Ban Type",
-                    value="PC Ban (Device-based)",
-                    inline=True)
-
-    embed.add_field(
-        name="Warning",
-        value=
-        "PC bans are device-based and permanent. Player cannot join from the banned device even with different accounts.",
-        inline=False)
+    embed.add_field(name="🆔 UserID", value=f"`{userid}`", inline=True)
+    embed.add_field(name="💢 Reason", value=reason, inline=True)
+    embed.add_field(name="💻 Ban Type", value="PC Ban (Device-based)", inline=True)
+    embed.add_field(name="⚠️ Warning", value="PC bans are device-based and permanent. Player cannot join from the banned device even with different accounts.", inline=False)
 
     await interaction.followup.send(embed=embed,
-                                    view=PCBanView(userid, reason,
-                                                   data['name'],
-                                                   data['display'],
-                                                   interaction.user))
+                                    view=PCBanView(userid, reason, data['name'], data['display'], interaction.user))
 
 
 # ===== UNPCBAN COMMANDS =====
@@ -2293,16 +1910,13 @@ async def pcban_command(interaction: discord.Interaction, userid: str,
 @app_commands.describe(userid="Roblox UserID to unban")
 async def unpcban_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
@@ -2310,35 +1924,24 @@ async def unpcban_command(interaction: discord.Interaction, userid: str):
     username = data['name'] if data else f"User {userid}"
     display_name = data['display'] if data else username
 
-    embed = ModerationEmbed(title="Confirm PC Unban",
-                            description=f"PC Unban **{username}**?",
-                            color=discord.Color.gold(),
-                            target_user=f"{username} ({userid})",
-                            moderator=interaction.user)
+    embed = ZeroTwoEmbed(title="Confirm PC Unban", description=f"PC Unban **{username}**?", color=0xffd700,
+                         target_user=f"{username} ({userid})", moderator=interaction.user)
 
     if data and data['avatar']:
         embed.set_thumbnail(url=data['avatar'])
 
-    embed.add_field(
-        name="Warning",
-        value="This will remove the device-based PC ban for this user.",
-        inline=False)
+    embed.add_field(name="⚠️ Warning", value="This will remove the device-based PC ban for this user.", inline=False)
 
     await interaction.followup.send(embed=embed,
-                                    view=UnPCBanView(userid, username,
-                                                     display_name,
-                                                     interaction.user))
+                                    view=UnPCBanView(userid, username, display_name, interaction.user))
 
 
 # ===== BANASYNC COMMANDS =====
 @tree.command(name="banasync", description="Ban a player by userid")
-@app_commands.describe(userid="The Roblox user ID to ban",
-                       reason="Reason for the ban")
-async def banasync_command(interaction: discord.Interaction, userid: str,
-                           reason: str):
+@app_commands.describe(userid="The Roblox user ID to ban", reason="Reason for the ban")
+async def banasync_command(interaction: discord.Interaction, userid: str, reason: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("❌ No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2348,7 +1951,6 @@ async def banasync_command(interaction: discord.Interaction, userid: str,
         username = data['name'] if data else f"User {userid}"
         display_name = data['display'] if data else username
 
-        # Send ban command WITHOUT duration field
         response = requests.post(
             f"{API_URL}/send_command",
             json={
@@ -2357,38 +1959,30 @@ async def banasync_command(interaction: discord.Interaction, userid: str,
                 "reason": reason,
                 "executor": interaction.user.name,
                 "username": username,
-                "banType": "normal"  # Or "pc" if needed
+                "banType": "normal"
             },
             timeout=10)
 
         if response.status_code == 200:
-            embed = ModerationEmbed(
+            embed = ZeroTwoEmbed(
                 title="✅ Ban Command Sent",
                 description=f"**{username}** has been banned.",
-                color=discord.Color.green(),
+                color=0x00ff00,
                 target_user=f"{username} ({userid})",
                 moderator=interaction.user)
-            embed.add_field(name="Reason", value=reason, inline=False)
-            embed.add_field(name="Type", value="Normal Ban", inline=True)
+            embed.add_field(name="💢 Reason", value=reason, inline=False)
+            embed.add_field(name="🔰 Type", value="Normal Ban", inline=True)
         else:
             error_msg = response.text if response.text else f"Status: {response.status_code}"
-            embed = ModerationEmbed(title="❌ Ban Command Failed",
-                                    description=f"Error: {error_msg}",
-                                    color=discord.Color.red())
+            embed = ZeroTwoEmbed(title="❌ Ban Command Failed", description=f"Error: {error_msg}", color=0xff0000)
 
         await interaction.followup.send(embed=embed)
 
     except requests.exceptions.Timeout:
-        embed = ModerationEmbed(
-            title="❌ Timeout Error",
-            description="Request timed out. Server may be unavailable.",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="❌ Timeout Error", description="Request timed out. Server may be unavailable.", color=0xff0000)
         await interaction.followup.send(embed=embed)
     except Exception as e:
-        embed = ModerationEmbed(
-            title="❌ Error",
-            description=f"Failed to send ban command: {str(e)}",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="❌ Error", description=f"Failed to send ban command: {str(e)}", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
@@ -2397,8 +1991,7 @@ async def banasync_command(interaction: discord.Interaction, userid: str,
 @app_commands.describe(userid="The Roblox user ID to unban")
 async def unbanasync_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("❌ No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2407,7 +2000,6 @@ async def unbanasync_command(interaction: discord.Interaction, userid: str):
         data = await get_roblox_user_data(userid)
         username = data['name'] if data else f"User {userid}"
 
-        # Send unban command
         response = requests.post(f"{API_URL}/send_command",
                                  json={
                                      "command": "unban",
@@ -2417,31 +2009,23 @@ async def unbanasync_command(interaction: discord.Interaction, userid: str):
                                  timeout=10)
 
         if response.status_code == 200:
-            embed = ModerationEmbed(
+            embed = ZeroTwoEmbed(
                 title="✅ Unban Command Sent",
                 description=f"**{username}** has been unbanned.",
-                color=discord.Color.green(),
+                color=0x00ff00,
                 target_user=f"{username} ({userid})",
                 moderator=interaction.user)
         else:
             error_msg = response.text if response.text else f"Status: {response.status_code}"
-            embed = ModerationEmbed(title="❌ Unban Command Failed",
-                                    description=f"Error: {error_msg}",
-                                    color=discord.Color.red())
+            embed = ZeroTwoEmbed(title="❌ Unban Command Failed", description=f"Error: {error_msg}", color=0xff0000)
 
         await interaction.followup.send(embed=embed)
 
     except requests.exceptions.Timeout:
-        embed = ModerationEmbed(
-            title="❌ Timeout Error",
-            description="Request timed out. Server may be unavailable.",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="❌ Timeout Error", description="Request timed out. Server may be unavailable.", color=0xff0000)
         await interaction.followup.send(embed=embed)
     except Exception as e:
-        embed = ModerationEmbed(
-            title="❌ Error",
-            description=f"Failed to send unban command: {str(e)}",
-            color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="❌ Error", description=f"Failed to send unban command: {str(e)}", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
@@ -2453,37 +2037,27 @@ async def unbanasync_command(interaction: discord.Interaction, userid: str):
 async def mute_command(interaction: discord.Interaction, userid: str,
                        duration: int, reason: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("❌ No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     data = await get_roblox_user_data(userid)
     username = data['name'] if data else f"User {userid}"
 
-    embed = ModerationEmbed(title="Confirm Mute",
-                            description=f"Mute **{username}**?",
-                            color=discord.Color.orange(),
-                            target_user=f"{username} ({userid})",
-                            moderator=interaction.user)
-    embed.add_field(name="Duration", value=f"{duration} minutes", inline=True)
-    embed.add_field(name="Reason", value=reason, inline=True)
+    embed = ZeroTwoEmbed(title="Confirm Mute", description=f"Mute **{username}**?", color=0xffa500,
+                         target_user=f"{username} ({userid})", moderator=interaction.user)
+    embed.add_field(name="⏰ Duration", value=f"{duration} minutes", inline=True)
+    embed.add_field(name="💢 Reason", value=reason, inline=True)
 
     await interaction.followup.send(embed=embed,
-                                    view=ConfirmActionView("mute",
-                                                           userid,
-                                                           reason,
-                                                           username,
-                                                           interaction.user,
-                                                           duration=duration))
+                                    view=ConfirmActionView("mute", userid, reason, username,
+                                                           interaction.user, duration=duration))
 
 
 # ===== UNMUTE COMMANDS =====
@@ -2491,32 +2065,25 @@ async def mute_command(interaction: discord.Interaction, userid: str,
 @app_commands.describe(userid="Roblox UserID")
 async def umute_command(interaction: discord.Interaction, userid: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("❌ No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("❌ No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not userid.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="UserID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="UserID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     data = await get_roblox_user_data(userid)
     username = data['name'] if data else f"User {userid}"
 
-    embed = ModerationEmbed(title="Confirm Unmute",
-                            description=f"Unmute **{username}**?",
-                            color=discord.Color.green(),
-                            target_user=f"{username} ({userid})",
-                            moderator=interaction.user)
+    embed = ZeroTwoEmbed(title="Confirm Unmute", description=f"Unmute **{username}**?", color=0x00ff00,
+                         target_user=f"{username} ({userid})", moderator=interaction.user)
 
     await interaction.followup.send(embed=embed,
-                                    view=ConfirmActionView(
-                                        "umute", userid, "Unmuted via Discord",
-                                        username, interaction.user))
+                                    view=ConfirmActionView("umute", userid, "Unmuted via Discord",
+                                                           username, interaction.user))
 
 
 # ===== BLACKLIST COMMANDS =====
@@ -2524,37 +2091,26 @@ async def umute_command(interaction: discord.Interaction, userid: str):
 @app_commands.describe(asset_id="Asset ID to blacklist")
 async def blacklist_command(interaction: discord.Interaction, asset_id: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not asset_id.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="Asset ID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="Asset ID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     try:
         if asset_blacklist.is_blacklisted(asset_id):
-            embed = ModerationEmbed(title="Already Blacklisted",
-                                    description=f"Asset `{asset_id}` is already blacklisted.",
-                                    color=discord.Color.orange())
+            embed = ZeroTwoEmbed(title="Already Blacklisted", description=f"Asset `{asset_id}` is already blacklisted.", color=0xffa500)
         else:
             if asset_blacklist.add_asset(asset_id):
-                embed = ModerationEmbed(title="✅ Asset Blacklisted",
-                                        description=f"Asset `{asset_id}` has been added to blacklist.",
-                                        color=discord.Color.green())
+                embed = ZeroTwoEmbed(title="✅ Asset Blacklisted", description=f"Asset `{asset_id}` has been added to blacklist.", color=0x00ff00)
             else:
-                embed = ModerationEmbed(title="❌ Failed",
-                                        description=f"Failed to blacklist asset `{asset_id}`.",
-                                        color=discord.Color.red())
+                embed = ZeroTwoEmbed(title="❌ Failed", description=f"Failed to blacklist asset `{asset_id}`.", color=0xff0000)
     except Exception as e:
-        embed = ModerationEmbed(title="❌ Error",
-                                description=f"Error: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="❌ Error", description=f"Error: {str(e)}", color=0xff0000)
 
     await interaction.followup.send(embed=embed)
 
@@ -2564,37 +2120,26 @@ async def blacklist_command(interaction: discord.Interaction, asset_id: str):
 @app_commands.describe(asset_id="Asset ID to remove from blacklist")
 async def unblacklist_command(interaction: discord.Interaction, asset_id: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not asset_id.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="Asset ID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="Asset ID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
     try:
         if not asset_blacklist.is_blacklisted(asset_id):
-            embed = ModerationEmbed(title="Not Blacklisted",
-                                    description=f"Asset `{asset_id}` is not in blacklist.",
-                                    color=discord.Color.orange())
+            embed = ZeroTwoEmbed(title="Not Blacklisted", description=f"Asset `{asset_id}` is not in blacklist.", color=0xffa500)
         else:
             if asset_blacklist.remove_asset(asset_id):
-                embed = ModerationEmbed(title="✅ Asset Removed",
-                                        description=f"Asset `{asset_id}` has been removed from blacklist.",
-                                        color=discord.Color.green())
+                embed = ZeroTwoEmbed(title="✅ Asset Removed", description=f"Asset `{asset_id}` has been removed from blacklist.", color=0x00ff00)
             else:
-                embed = ModerationEmbed(title="❌ Failed",
-                                        description=f"Failed to remove asset `{asset_id}`.",
-                                        color=discord.Color.red())
+                embed = ZeroTwoEmbed(title="❌ Failed", description=f"Failed to remove asset `{asset_id}`.", color=0xff0000)
     except Exception as e:
-        embed = ModerationEmbed(title="❌ Error",
-                                description=f"Error: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="❌ Error", description=f"Error: {str(e)}", color=0xff0000)
 
     await interaction.followup.send(embed=embed)
 
@@ -2603,8 +2148,7 @@ async def unblacklist_command(interaction: discord.Interaction, asset_id: str):
 @tree.command(name="viewblacklist", description="View all blacklisted assets")
 async def viewblacklist_command(interaction: discord.Interaction):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2612,33 +2156,22 @@ async def viewblacklist_command(interaction: discord.Interaction):
     try:
         assets = asset_blacklist.get_all_assets()
 
-        embed = ModerationEmbed(title="Asset Blacklist",
-                                description="List of blacklisted assets",
-                                color=discord.Color.dark_purple())
+        embed = ZeroTwoEmbed(title="Asset Blacklist", description="List of blacklisted assets", color=0x800080)
 
         if assets:
-            embed.add_field(name="Total Assets",
-                            value=str(len(assets)),
-                            inline=True)
+            embed.add_field(name="Total Assets", value=str(len(assets)), inline=True)
 
-            # Show first 10 assets
             asset_list = "\n".join([f"`{asset}`" for asset in assets[:10]])
-            embed.add_field(name="Assets",
-                            value=asset_list if asset_list else "None",
-                            inline=False)
+            embed.add_field(name="Assets", value=asset_list if asset_list else "None", inline=False)
 
             if len(assets) > 10:
-                embed.set_footer(text=f"And {len(assets)-10} more assets...")
+                embed.set_footer(text=f"And {len(assets)-10} more assets... •  Zero Two")
         else:
-            embed.add_field(name="Blacklist",
-                            value="No assets are currently blacklisted.",
-                            inline=False)
+            embed.add_field(name="Blacklist", value="No assets are currently blacklisted.", inline=False)
 
         await interaction.followup.send(embed=embed)
     except Exception as e:
-        embed = ModerationEmbed(title="❌ Error",
-                                description=f"Error: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="❌ Error", description=f"Error: {str(e)}", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
@@ -2647,16 +2180,13 @@ async def viewblacklist_command(interaction: discord.Interaction):
 @app_commands.describe(asset_id="Asset ID to check")
 async def checkasset_command(interaction: discord.Interaction, asset_id: str):
     if not is_authorized(interaction):
-        await interaction.response.send_message("No permission.",
-                                                ephemeral=True)
+        await interaction.response.send_message("No permission, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
 
     if not asset_id.isdigit():
-        embed = ModerationEmbed(title="Invalid ID",
-                                description="Asset ID must be numbers only.",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="Invalid ID", description="Asset ID must be numbers only.", color=0xff0000)
         await interaction.followup.send(embed=embed)
         return
 
@@ -2664,17 +2194,11 @@ async def checkasset_command(interaction: discord.Interaction, asset_id: str):
         is_blacklisted = asset_blacklist.is_blacklisted(asset_id)
 
         if is_blacklisted:
-            embed = ModerationEmbed(title="🔴 Blacklisted",
-                                    description=f"Asset `{asset_id}` is blacklisted.",
-                                    color=discord.Color.red())
+            embed = ZeroTwoEmbed(title="🔴 Blacklisted", description=f"Asset `{asset_id}` is blacklisted.", color=0xff0000)
         else:
-            embed = ModerationEmbed(title="🟢 Allowed",
-                                    description=f"Asset `{asset_id}` is not blacklisted.",
-                                    color=discord.Color.green())
+            embed = ZeroTwoEmbed(title="🟢 Allowed", description=f"Asset `{asset_id}` is not blacklisted.", color=0x00ff00)
     except Exception as e:
-        embed = ModerationEmbed(title="❌ Error",
-                                description=f"Error: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="❌ Error", description=f"Error: {str(e)}", color=0xff0000)
 
     await interaction.followup.send(embed=embed)
 
@@ -2683,7 +2207,7 @@ async def checkasset_command(interaction: discord.Interaction, asset_id: str):
 @tree.command(name="clearblacklist", description="Clear all blacklisted assets (Admin)")
 async def clearblacklist_command(interaction: discord.Interaction):
     if not is_admin(interaction):
-        await interaction.response.send_message("Admin only.", ephemeral=True)
+        await interaction.response.send_message("Admin only, DARLING~", ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2693,9 +2217,7 @@ async def clearblacklist_command(interaction: discord.Interaction):
         count = len(assets)
 
         if count == 0:
-            embed = ModerationEmbed(title="Blacklist Empty",
-                                    description="No assets to clear.",
-                                    color=discord.Color.orange())
+            embed = ZeroTwoEmbed(title="Blacklist Empty", description="No assets to clear.", color=0xffa500)
         else:
             class ClearBlacklistView(View):
                 def __init__(self, count: int, interaction_user: discord.User | discord.Member):
@@ -2708,7 +2230,7 @@ async def clearblacklist_command(interaction: discord.Interaction):
                                    emoji="🗑️")
                 async def confirm(self, interaction: discord.Interaction, button: Button):
                     if interaction.user != self.interaction_user:
-                        await interaction.response.send_message("Not your session.", ephemeral=True)
+                        await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
                         return
 
                     button.disabled = True
@@ -2716,56 +2238,49 @@ async def clearblacklist_command(interaction: discord.Interaction):
                     await interaction.response.edit_message(view=self)
 
                     try:
-                        # This would need API support to clear all assets
-                        # For now, we'll show a message
-                        embed = ModerationEmbed(
+                        embed = ZeroTwoEmbed(
                             title="⚠️ Feature Not Implemented",
                             description=f"This feature requires API support to clear all {self.count} assets.",
-                            color=discord.Color.orange())
+                            color=0xffa500)
                         await interaction.edit_original_response(embed=embed, view=None)
                     except Exception as e:
-                        await interaction.edit_original_response(
-                            content=f"Error: {str(e)}", view=None)
+                        await interaction.edit_original_response(content=f"Error: {str(e)}", view=None)
 
                 @discord.ui.button(label="Cancel",
                                    style=discord.ButtonStyle.secondary,
                                    emoji="✖️")
                 async def cancel(self, interaction: discord.Interaction, button: Button):
                     if interaction.user != self.interaction_user:
-                        await interaction.response.send_message("Not your session.", ephemeral=True)
+                        await interaction.response.send_message("Not your session, DARLING~", ephemeral=True)
                         return
 
                     await interaction.response.edit_message(content="Cancelled.", embed=None, view=None)
 
-            embed = ModerationEmbed(
+            embed = ZeroTwoEmbed(
                 title="Confirm Clear Blacklist",
                 description=f"This will clear ALL {count} blacklisted assets.",
-                color=discord.Color.red(),
+                color=0xff0000,
                 moderator=interaction.user)
-            embed.add_field(name="Warning",
-                            value="This action cannot be undone!",
-                            inline=False)
+            embed.add_field(name="⚠️ Warning", value="This action cannot be undone!", inline=False)
 
             await interaction.followup.send(embed=embed,
                                             view=ClearBlacklistView(count, interaction.user))
 
     except Exception as e:
-        embed = ModerationEmbed(title="❌ Error",
-                                description=f"Error: {str(e)}",
-                                color=discord.Color.red())
+        embed = ZeroTwoEmbed(title="❌ Error", description=f"Error: {str(e)}", color=0xff0000)
         await interaction.followup.send(embed=embed)
 
 
-# ===== HELP COMMANDS =====
 # ===== SETTINGS COMMANDS =====
-
 @tree.command(name="settings", description="Manage system settings")
-@app_commands.describe(onjoin="Enable/Disable on-join checks (True/False)", onlog="Enable/Disable logging (True/False)", banasync="Enable/Disable anti-cheat auto-ban (True/False)")
+@app_commands.describe(onjoin="Enable/Disable on-join checks (True/False)", 
+                      onlog="Enable/Disable logging (True/False)", 
+                      banasync="Enable/Disable anti-cheat auto-ban (True/False)")
 async def settings_command(interaction: discord.Interaction,
                            onjoin: Optional[str] = None,
                            onlog: Optional[str] = None,
                            banasync: Optional[str] = None):
-    # Map string inputs to booleans for the settings command
+
     def to_bool(val):
         if val is None: return None
         return val.lower() in ['true', 'yes', '1', 'on']
@@ -2773,8 +2288,9 @@ async def settings_command(interaction: discord.Interaction,
     onjoin_bool = to_bool(onjoin)
     onlog_bool = to_bool(onlog)
     banasync_bool = to_bool(banasync)
+
     if not is_admin(interaction):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        await interaction.response.send_message("❌ Admin only, DARLING~", ephemeral=True)
         return
 
     update_data = {}
@@ -2792,7 +2308,7 @@ async def settings_command(interaction: discord.Interaction,
 
         if res.status_code == 200:
             curr_settings = res.json().get("settings", res.json())
-            embed = ModerationEmbed(title="System Settings", description=msg, color=discord.Color.blue(), moderator=interaction.user)
+            embed = ZeroTwoEmbed(title="System Settings", description=msg, color=0x0000ff, moderator=interaction.user)
             for k, v in curr_settings.items():
                 embed.add_field(name=k.capitalize(), value="✅ Enabled" if v else "❌ Disabled", inline=True)
             await interaction.response.send_message(embed=embed)
@@ -2800,6 +2316,7 @@ async def settings_command(interaction: discord.Interaction,
             await interaction.response.send_message("❌ Failed to manage settings.")
     except Exception as e:
         await interaction.response.send_message(f"❌ Error: {e}")
+
 
 @tree.command(name="client_fix", description="Send a client-side fix (Reset, Fix Camera)")
 @app_commands.describe(type="Fix type (reset/camera)")
@@ -2811,7 +2328,7 @@ async def client_fix_command(interaction: discord.Interaction, type: str):
     try:
         res = requests.post(f"{API_URL}/client_fix", json={"type": type}, timeout=5)
         if res.status_code == 200:
-            await interaction.response.send_message(f"✅ Client fix `{type}` sent to server.")
+            await interaction.response.send_message(f"✅ Client fix `{type}` sent to server, DARLING~")
         else:
             await interaction.response.send_message("❌ Failed to send client fix.")
     except Exception as e:
@@ -2820,12 +2337,12 @@ async def client_fix_command(interaction: discord.Interaction, type: str):
 
 @tree.command(name="help", description="Show all commands")
 async def help_command(interaction: discord.Interaction):
-    embed = ModerationEmbed(
-        title="Kynx SS 10 Commands Help",
+    embed = ZeroTwoEmbed(
+        title="Zero Two's Commands Help",
         description="Game server moderation bot - Full command list",
-        color=discord.Color.blue())
+        color=0xff69b4)
 
-    embed.add_field(name="**Player Management**",
+    embed.add_field(name="** Player Management**",
                     value="""`/kick [id] [reason]` - Kick player
 `/mute [id] [duration] [reason]` - Mute player
 `/umute [id]` - Remove mute
@@ -2836,7 +2353,7 @@ async def help_command(interaction: discord.Interaction):
                     inline=False)
 
     embed.add_field(
-        name="**Ban Commands**",
+        name="**🔨 Ban Commands**",
         value="""`/ban [id] [reason] [duration] [type]` - Ban player
 `/unban [id] [type]` - Unban player
 `/pcban [id] [reason]` - PC Ban player
@@ -2846,7 +2363,7 @@ async def help_command(interaction: discord.Interaction):
 `/banlist` - View all bans (auto-saves)""",
         inline=False)
 
-    embed.add_field(name="**Server Commands**",
+    embed.add_field(name="**💫 Server Commands**",
                     value="""`/warn [id] [reason]` - Warn player
 `/cleanotes [id]` - Remove all notes (Admin)
 `/players` - Online players list
@@ -2856,7 +2373,7 @@ async def help_command(interaction: discord.Interaction):
 `/check` - Player count""",
                     inline=False)
 
-    embed.add_field(name="**Asset Management**",
+    embed.add_field(name="**📦 Asset Management**",
                     value="""`/blacklist [id]` - Block asset from scripts
 `/unblacklist [id]` - Allow asset in scripts
 `/viewblacklist` - List blocked assets
@@ -2864,7 +2381,7 @@ async def help_command(interaction: discord.Interaction):
 `/clearblacklist` - Clear all (Admin)""",
                     inline=False)
 
-    embed.add_field(name="**Admin Commands**",
+    embed.add_field(name="**⚡ Admin Commands**",
                     value="""`/restart` - Restart server
 `/shutdown` - Stop server
 `/announce [msg]` - Announcement
@@ -2873,30 +2390,26 @@ async def help_command(interaction: discord.Interaction):
 `/logs [lines]` - View server logs""",
                     inline=False)
 
-    embed.add_field(name="**System & Client**",
+    embed.add_field(name="**🔧 System & Client**",
                     value="""`/settings [onjoin] [onlog] [banasync]` - System toggles
 `/client_fix [type]` - Reset/Camera fix""",
                     inline=False)
 
-    embed.add_field(name="**Utility**",
+    embed.add_field(name="**📡 Utility**",
                     value="""`/ping` - Bot status
 `/check` - Server status""",
                     inline=False)
 
-    embed.set_footer(
-        text=
-        f"Kynx SS 10 • Total commands: 37 • GUI Refit: ✅ • Mobile Support: ✅ • Anti-Cheat: ✅"
-    )
+    embed.set_footer(text="Zero Two • Code:002 • Total commands: 37 • DARLING~")
     await interaction.response.send_message(embed=embed)
 
 
 @tree.command(name="cmds", description="Show all commands (short version)")
 async def cmds_command(interaction: discord.Interaction):
-    commands_list = """**Kynx SS 10 - Quick Commands List:**
+    commands_list = """** Zero Two's Quick Commands List:**
 
 **Player Management:**
-`/mute [id] [duration] [reason]` - Mute player
-`/umute [id]` - Remove mute `/kick`, `/userlogs`, `/addnote`, `/userinfo`, `/gameinfo`
+`/mute`, `/umute`, `/kick`, `/userlogs`, `/addnote`, `/userinfo`, `/gameinfo`
 
 **Ban Commands:**
 `/ban`, `/unban`, `/pcban`, `/unpcban`, `/banasync`, `/unbanasync`, `/banlist`
@@ -2916,11 +2429,8 @@ async def cmds_command(interaction: discord.Interaction):
 **Utility:**
 `/ping`, `/check`"""
 
-    embed = ModerationEmbed(title="Kynx SS 10 - Quick Commands",
-                            description=commands_list,
-                            color=discord.Color.blue())
-    embed.set_footer(
-        text="Use /help for detailed information • Total: 37 commands • Version: SS 10")
+    embed = ZeroTwoEmbed(title="Zero Two's Quick Commands", description=commands_list, color=0xff69b4)
+    embed.set_footer(text="Use /help for detailed information • Total: 37 commands • Code:002")
     await interaction.response.send_message(embed=embed)
 
 
@@ -2929,34 +2439,35 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         return
     elif isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ No permission.", ephemeral=True)
+        await ctx.send("❌ No permission, DARLING~", ephemeral=True)
     else:
         logger.error(f"Error: {str(error)}")
-        await ctx.send("❌ Error.", ephemeral=True)
+        await ctx.send("❌ Error, DARLING~", ephemeral=True)
 
 
 @bot.event
 async def on_ready():
-    logger.info(f"Kynx SS 10 ready: {bot.user}")
+    logger.info(f"Zero Two ready: {bot.user}")
     try:
         synced = await tree.sync()
         logger.info(f"Synced {len(synced)} global commands")
 
         command_names = [cmd.name for cmd in synced]
         logger.info(f"Synced commands: {', '.join(command_names)}")
+        logger.info("Zero Two Bot is now online! DARLING~")
     except Exception as e:
         logger.error(f"Failed to sync commands: {e}")
 
 
 def run():
     if TOKEN:
-        logger.info("Starting Kynx SS 10 bot...")
+        logger.info("Starting Zero Two Bot...")
+        logger.info("Code:002 - DARLING is here!")
         logger.info(f"Total commands loaded: 37")
-        logger.info("Version: SS 10")
+        logger.info("Version: Code:002")
         logger.info("Mute/Umute commands: ✅ Fixed & Restored")
         logger.info("PC Ban system: ✅ Enabled")
-        logger.info(
-            f"Banlist Auto-save: ✅ ALWAYS enabled (saves to {BANLIST_DIR}/)")
+        logger.info(f"Banlist Auto-save: ✅ ALWAYS enabled (saves to {BANLIST_DIR}/)")
         logger.info("Asset Blacklist: ✅ Integrated with API")
         bot.run(TOKEN)
     else:
