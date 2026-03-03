@@ -270,9 +270,18 @@ local_storage = LocalStorage()
 # ===== ZERO TWO EMBED =====
 class ZeroTwoEmbed(discord.Embed):
     def __init__(self, title, description, color=0xff69b4, target_user=None, moderator=None, **kwargs):
+        # Truncate description if it exceeds Discord's limit (4096)
+        # We use 3900 to be safe and allow for the code block backticks
+        if not description:
+            description = "No description provided."
+            
+        safe_description = str(description)
+        if len(safe_description) > 3900:
+            safe_description = safe_description[:3897] + "..."
+            
         super().__init__(
             title=f"🌸 {title} 🌸",
-            description=f"```{description}```",
+            description=f"```{safe_description}```",
             color=color,
             timestamp=datetime.utcnow()
         )
