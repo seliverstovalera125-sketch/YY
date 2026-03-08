@@ -17,6 +17,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Suppress SSL warnings for self-signed certs
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 TOKEN = os.getenv("DISCORD_TOKEN")
 ALLOWED_ROLE_ID = int(os.getenv("ALLOWED_ROLE_ID", "0"))
 ADMIN_ROLE_ID = int(os.getenv("ADMIN_ROLE_ID", "0"))
@@ -98,6 +102,7 @@ class APIClient:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()
+        self.session.verify = False  # Disable SSL verification for self-signed certs
         self.last_request = 0
         self.min_interval = 0.5
         self.headers = {
@@ -746,7 +751,7 @@ class EnhancedBanListView(View):
         await interaction.response.defer()
 
         try:
-            response = requests.get(f"{API_URL}/get_bans", timeout=10)
+            response = requests.get(f"{API_URL}/get_bans", timeout=10, verify=False)
             response.raise_for_status()
             bans = response.json()
 
@@ -854,7 +859,7 @@ class UnbanView(View):
                 }
 
             logger.info(f"Sending unban command: {data}")
-            response = requests.post(f"{API_URL}/send_command", json=data, timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=data, timeout=10, verify=False)
             response.raise_for_status()
 
             ban_type_text = "PC " if self.ban_type == "pc" else ""
@@ -914,7 +919,7 @@ class NoteView(View):
                 "note": self.note,
                 "executor": interaction.user.name
             }
-            response = requests.post(f"{API_URL}/send_command", json=note_data, timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=note_data, timeout=10, verify=False)
             response.raise_for_status()
 
             embed = ZeroTwoEmbed(
@@ -970,7 +975,7 @@ class CleanNotesView(View):
                 "userid": self.userid,
                 "executor": interaction.user.name
             }
-            response = requests.post(f"{API_URL}/send_command", json=clean_data, timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=clean_data, timeout=10, verify=False)
             response.raise_for_status()
 
             embed = ZeroTwoEmbed(
@@ -1022,7 +1027,7 @@ class AnnounceView(View):
                 "message": self.message,
                 "executor": interaction.user.name
             }
-            response = requests.post(f"{API_URL}/send_command", json=announce_data, timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=announce_data, timeout=10, verify=False)
             response.raise_for_status()
 
             embed = ZeroTwoEmbed(
@@ -1074,7 +1079,7 @@ class BroadcastView(View):
                 "message": self.message,
                 "executor": interaction.user.name
             }
-            response = requests.post(f"{API_URL}/send_command", json=broadcast_data, timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=broadcast_data, timeout=10, verify=False)
             response.raise_for_status()
 
             embed = ZeroTwoEmbed(
@@ -1130,7 +1135,7 @@ class WarnView(View):
                 "reason": self.reason,
                 "executor": interaction.user.name
             }
-            response = requests.post(f"{API_URL}/send_command", json=warning_data, timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=warning_data, timeout=10, verify=False)
             response.raise_for_status()
 
             embed = ZeroTwoEmbed(
@@ -1191,7 +1196,7 @@ class PCBanView(View):
             }
 
             logger.info(f"Sending PC ban command: {pcban_data}")
-            response = requests.post(f"{API_URL}/send_command", json=pcban_data, timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=pcban_data, timeout=10, verify=False)
             response.raise_for_status()
 
             embed = ZeroTwoEmbed(
@@ -1252,7 +1257,7 @@ class UnPCBanView(View):
             }
 
             logger.info(f"Sending PC unban command: {unpcban_data}")
-            response = requests.post(f"{API_URL}/send_command", json=unpcban_data, timeout=10)
+            response = requests.post(f"{API_URL}/send_command", json=unpcban_data, timeout=10, verify=False)
             response.raise_for_status()
 
             embed = ZeroTwoEmbed(
@@ -1521,7 +1526,7 @@ async def get_roblox_user_data(userid: str) -> Optional[Dict]:
             return cache_data["data"]
 
     try:
-        res = requests.get(f"https://users.roblox.com/v1/users/{userid}", timeout=5)
+        res = requests.get(f"https://users.roblox.com/v1/users/{userid}", timeout=5, verify=False)
         if res.status_code != 200:
             return None
         data = res.json()
@@ -1584,7 +1589,7 @@ async def get_roblox_game_data(placeid: str) -> Optional[Dict]:
 
 def check_api() -> bool:
     try:
-        response = requests.get(f"{API_URL}/get_players", timeout=5)
+        response = requests.get(f"{API_URL}/get_players", timeout=5, verify=False)
         return response.status_code == 200
     except:
         return False
@@ -1754,7 +1759,7 @@ async def userlogs_command(interaction: discord.Interaction, userid: str, limit:
     avatar = data['avatar'] if data else None
 
     try:
-        response = requests.get(f"{API_URL}/user_logs?userid={userid}", timeout=10)
+        response = requests.get(f"{API_URL}/user_logs?userid={userid}", timeout=10, verify=False)
 
         embed = ZeroTwoEmbed(
             title="User Logs",
@@ -1858,7 +1863,7 @@ async def userinfo_command(interaction: discord.Interaction, userid: str):
     ban_date = ""
 
     try:
-        bans_res = requests.get(f"{API_URL}/get_bans", timeout=5)
+        bans_res = requests.get(f"{API_URL}/get_bans", timeout=5, verify=False)
         if bans_res.status_code == 200:
             bans = bans_res.json()
             for ban in bans:
@@ -1959,7 +1964,7 @@ async def gameinfo_command(interaction: discord.Interaction, placeid: str):
     embed.add_field(name="🔗 URL", value=f"[Click here]({game_data['url']})", inline=False)
 
     try:
-        players_res = requests.get(f"{API_URL}/get_players", timeout=5)
+        players_res = requests.get(f"{API_URL}/get_players", timeout=5, verify=False)
         if players_res.status_code == 200:
             players_data = players_res.json()
             player_count = players_data.get('count', 0)
@@ -2072,7 +2077,7 @@ async def unban_command(interaction: discord.Interaction, userid: str, ban_type:
         return
 
     try:
-        response = requests.get(f"{API_URL}/get_bans", timeout=10)
+        response = requests.get(f"{API_URL}/get_bans", timeout=10, verify=False)
         response.raise_for_status()
         bans = response.json()
 
@@ -2143,7 +2148,7 @@ async def pcban_command(interaction: discord.Interaction, userid: str, reason: s
         return
 
     try:
-        response = requests.get(f"{API_URL}/get_bans", timeout=10)
+        response = requests.get(f"{API_URL}/get_bans", timeout=10, verify=False)
         if response.status_code == 200:
             bans = response.json()
             for ban in bans:
@@ -2358,7 +2363,7 @@ async def banlist_command(interaction: discord.Interaction):
     await interaction.response.defer()
 
     try:
-        response = requests.get(f"{API_URL}/get_bans", timeout=10)
+        response = requests.get(f"{API_URL}/get_bans", timeout=10, verify=False)
         response.raise_for_status()
         bans = response.json()
 
@@ -2499,7 +2504,7 @@ async def players_command(interaction: discord.Interaction):
     await interaction.response.defer()
 
     try:
-        res = requests.get(f"{API_URL}/get_players", timeout=10)
+        res = requests.get(f"{API_URL}/get_players", timeout=10, verify=False)
         res.raise_for_status()
         data = res.json()
         count = data.get('count', 0)
@@ -2522,7 +2527,7 @@ async def players_command(interaction: discord.Interaction):
 
                 is_banned = False
                 try:
-                    bans_res = requests.get(f"{API_URL}/get_bans", timeout=2)
+                    bans_res = requests.get(f"{API_URL}/get_bans", timeout=2, verify=False)
                     if bans_res.status_code == 200:
                         bans = bans_res.json()
                         for ban in bans:
@@ -2562,7 +2567,7 @@ async def find_command(interaction: discord.Interaction, username: str):
     await interaction.response.defer()
 
     try:
-        response = requests.get(f"{API_URL}/get_players", timeout=10)
+        response = requests.get(f"{API_URL}/get_players", timeout=10, verify=False)
         if response.status_code == 200:
             players_data = response.json()
             players = players_data.get('players', [])
@@ -2622,7 +2627,7 @@ async def lookup_command(interaction: discord.Interaction, userid: str):
     username = data['name'] if data else f"ID: {userid}"
 
     try:
-        bans_res = requests.get(f"{API_URL}/get_bans", timeout=10)
+        bans_res = requests.get(f"{API_URL}/get_bans", timeout=10, verify=False)
         is_banned = False
         ban_reason = ""
         ban_type = "normal"
@@ -2639,7 +2644,7 @@ async def lookup_command(interaction: discord.Interaction, userid: str):
                         ban_date = datetime.fromtimestamp(ban['timestamp']).strftime('%Y-%m-%d %H:%M')
                     break
 
-        notes_res = requests.get(f"{API_URL}/get_notes?userid={userid}", timeout=5)
+        notes_res = requests.get(f"{API_URL}/get_notes?userid={userid}", timeout=5, verify=False)
         notes = []
         if notes_res.status_code == 200:
             notes = notes_res.json()
@@ -2714,12 +2719,12 @@ async def stats_command(interaction: discord.Interaction):
     await interaction.response.defer()
 
     try:
-        players_res = requests.get(f"{API_URL}/get_players", timeout=5)
+        players_res = requests.get(f"{API_URL}/get_players", timeout=5, verify=False)
         player_count = 0
         if players_res.status_code == 200:
             player_count = players_res.json().get('count', 0)
 
-        bans_res = requests.get(f"{API_URL}/get_bans", timeout=5)
+        bans_res = requests.get(f"{API_URL}/get_bans", timeout=5, verify=False)
         ban_count = 0
         normal_bans = 0
         pc_bans = 0
@@ -2747,7 +2752,7 @@ async def stats_command(interaction: discord.Interaction):
 
         suspicious_count = 0
         try:
-            sus_res = requests.get(f"{API_URL}/get_suspicious_accounts", timeout=5)
+            sus_res = requests.get(f"{API_URL}/get_suspicious_accounts", timeout=5, verify=False)
             if sus_res.status_code == 200:
                 sus_data = sus_res.json()
                 suspicious_count = len(sus_data.get('suspiciousAccounts', []))
@@ -2785,7 +2790,7 @@ async def check_command(interaction: discord.Interaction):
         return
 
     try:
-        res = requests.get(f"{API_URL}/get_players", timeout=5)
+        res = requests.get(f"{API_URL}/get_players", timeout=5, verify=False)
         res.raise_for_status()
         data = res.json()
         count = data.get('count', 0)
@@ -3139,7 +3144,7 @@ async def logs_command(interaction: discord.Interaction, lines: int = 10):
     await interaction.response.defer()
 
     try:
-        logs_res = requests.get(f"{API_URL}/get_logs?lines={lines}", timeout=10)
+        logs_res = requests.get(f"{API_URL}/get_logs?lines={lines}", timeout=10, verify=False)
 
         embed = ZeroTwoEmbed(
             title="Server Logs",
@@ -3217,10 +3222,10 @@ async def settings_command(
 
     try:
         if update_data:
-            res = requests.post(f"{API_URL}/update_settings", json=update_data, timeout=5)
+            res = requests.post(f"{API_URL}/update_settings", json=update_data, timeout=5, verify=False)
             msg = "✅ Settings updated."
         else:
-            res = requests.get(f"{API_URL}/get_settings", timeout=5)
+            res = requests.get(f"{API_URL}/get_settings", timeout=5, verify=False)
             msg = "⚙️ Current Settings:"
 
         if res.status_code == 200:
@@ -3252,7 +3257,7 @@ async def client_fix_command(interaction: discord.Interaction, type: str):
         return
 
     try:
-        res = requests.post(f"{API_URL}/client_fix", json={"type": type}, timeout=5)
+        res = requests.post(f"{API_URL}/client_fix", json={"type": type}, timeout=5, verify=False)
         if res.status_code == 200:
             await interaction.response.send_message(f"✅ Client fix `{type}` sent to server, DARLING~")
         else:
@@ -3273,7 +3278,7 @@ async def ping_command(interaction: discord.Interaction):
     api_time = None
     if api_status:
         start = time.time()
-        requests.get(f"{API_URL}/get_players", timeout=5)
+        requests.get(f"{API_URL}/get_players", timeout=5, verify=False)
         api_time = round((time.time() - start) * 1000, 2)
 
     if latency < 100:
